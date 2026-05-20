@@ -613,195 +613,195 @@ export default function ChartsSection({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 auto-rows-fr">
       {/* Row 1: Production and Financial */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <GaugeIndicators
-          selectedLivestock={selectedLivestock}
-          darkMode={darkMode}
-        />
 
-        {/* Monthly Production Bar Chart */}
-        <div className={chartCardClass}>
-          <h3 className={titleClass}>Producción Mensual</h3>
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={productionData}>
-              <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#374151' : '#E5E7EB'} />
-              <XAxis dataKey="month" stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
-              <YAxis stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Legend wrapperStyle={{ fontSize: '12px' }} />
-              <Bar dataKey="produccion" fill={primaryColor} radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+      <GaugeIndicators
+        selectedLivestock={selectedLivestock}
+        darkMode={darkMode}
+      />
 
-        {/* Financial Evolution Line Chart */}
-        <div className={chartCardClass}>
-          <h3 className={titleClass}>Ganancias Mensuales</h3>
-          <ResponsiveContainer width="100%" height={240}>
-            <LineChart data={productionData}>
-              <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#374151' : '#E5E7EB'} />
-              <XAxis dataKey="month" stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
-              <YAxis stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Legend wrapperStyle={{ fontSize: '12px' }} />
-              <Line type="monotone" dataKey="ganancias" stroke="#22C55E" strokeWidth={2} dot={{ fill: '#22C55E', r: 3 }} />
-              <Line type="monotone" dataKey="gastos" stroke="#EF4444" strokeWidth={2} dot={{ fill: '#EF4444', r: 3 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+      {/* Monthly Production Bar Chart */}
+      <div className={chartCardClass}>
+        <h3 className={titleClass}>Producción Mensual</h3>
+        <ResponsiveContainer width="100%" height={240}>
+          <BarChart data={productionData}>
+            <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#374151' : '#E5E7EB'} />
+            <XAxis dataKey="month" stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
+            <YAxis stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
+            <Tooltip contentStyle={tooltipStyle} />
+            <Legend wrapperStyle={{ fontSize: '12px' }} />
+            <Bar dataKey="produccion" fill={primaryColor} radius={[6, 6, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
+
+      {/* Financial Evolution Line Chart */}
+      <div className={chartCardClass}>
+        <h3 className={titleClass}>Ganancias Mensuales</h3>
+        <ResponsiveContainer width="100%" height={240}>
+          <LineChart data={productionData}>
+            <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#374151' : '#E5E7EB'} />
+            <XAxis dataKey="month" stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
+            <YAxis stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
+            <Tooltip contentStyle={tooltipStyle} />
+            <Legend wrapperStyle={{ fontSize: '12px' }} />
+            <Line type="monotone" dataKey="ganancias" stroke="#22C55E" strokeWidth={2} dot={{ fill: '#22C55E', r: 3 }} />
+            <Line type="monotone" dataKey="gastos" stroke="#EF4444" strokeWidth={2} dot={{ fill: '#EF4444', r: 3 }} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
 
       {/* Row 2: Births/Deaths and Distribution */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Births vs Deaths Area Chart */}
-        <div className={chartCardClass}>
-          <h3 className={titleClass}>Nacimientos vs Muertes</h3>
-          <ResponsiveContainer width="100%" height={240}>
-            <AreaChart data={productionData}>
-              <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#374151' : '#E5E7EB'} />
-              <XAxis dataKey="month" stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
-              <YAxis stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Legend wrapperStyle={{ fontSize: '12px' }} />
-              <Area type="monotone" dataKey="nacimientos" stackId="1" stroke="#22C55E" fill="#22C55E" fillOpacity={0.6} />
-              <Area type="monotone" dataKey="muertes" stackId="2" stroke="#EF4444" fill="#EF4444" fillOpacity={0.6} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
 
-        {/* Distribution Pie Chart */}
-        <div className={chartCardClass}>
-          <h3 className={titleClass}>Distribución de Producción</h3>
-          <ResponsiveContainer width="100%" height={240}>
-            <PieChart>
-              <Pie
-                data={distributionData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {distributionData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip contentStyle={tooltipStyle} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
+      {/* Births vs Deaths Area Chart */}
+      <div className={chartCardClass}>
+        <h3 className={titleClass}>Nacimientos vs Muertes</h3>
+        <ResponsiveContainer width="100%" height={240}>
+          <AreaChart data={productionData}>
+            <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#374151' : '#E5E7EB'} />
+            <XAxis dataKey="month" stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
+            <YAxis stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
+            <Tooltip contentStyle={tooltipStyle} />
+            <Legend wrapperStyle={{ fontSize: '12px' }} />
+            <Area type="monotone" dataKey="nacimientos" stackId="1" stroke="#22C55E" fill="#22C55E" fillOpacity={0.6} />
+            <Area type="monotone" dataKey="muertes" stackId="2" stroke="#EF4444" fill="#EF4444" fillOpacity={0.6} />
+          </AreaChart>
+        </ResponsiveContainer>
       </div>
+
+      {/* Distribution Pie Chart */}
+      <div className={chartCardClass}>
+        <h3 className={titleClass}>Distribución de Producción</h3>
+        <ResponsiveContainer width="100%" height={240}>
+          <PieChart>
+            <Pie
+              data={distributionData}
+              cx="50%"
+              cy="50%"
+              labelLine={false}
+              label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+              outerRadius={80}
+              fill="#8884d8"
+              dataKey="value"
+            >
+              {distributionData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip contentStyle={tooltipStyle} />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+
 
       {/* Row 3: Monthly Sales and Income/Expense */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Monthly Sales */}
-        <div className={chartCardClass}>
-          <h3 className={titleClass}>Ventas Mensuales</h3>
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={productionData}>
-              <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#374151' : '#E5E7EB'} />
-              <XAxis dataKey="month" stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
-              <YAxis stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Legend wrapperStyle={{ fontSize: '12px' }} />
-              <Bar dataKey="ventas" fill="#8B5CF6" radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
 
-        {/* Income vs Expense Composed */}
-        <div className={chartCardClass}>
-          <h3 className={titleClass}>Ingresos vs Egresos</h3>
-          <ResponsiveContainer width="100%" height={240}>
-            <ComposedChart data={incomeExpenseData}>
-              <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#374151' : '#E5E7EB'} />
-              <XAxis dataKey="month" stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
-              <YAxis stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Legend wrapperStyle={{ fontSize: '12px' }} />
-              <Bar dataKey="ingresos" fill="#22C55E" radius={[6, 6, 0, 0]} />
-              <Line type="monotone" dataKey="egresos" stroke="#EF4444" strokeWidth={2} />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </div>
+      {/* Monthly Sales */}
+      <div className={chartCardClass}>
+        <h3 className={titleClass}>Ventas Mensuales</h3>
+        <ResponsiveContainer width="100%" height={240}>
+          <BarChart data={productionData}>
+            <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#374151' : '#E5E7EB'} />
+            <XAxis dataKey="month" stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
+            <YAxis stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
+            <Tooltip contentStyle={tooltipStyle} />
+            <Legend wrapperStyle={{ fontSize: '12px' }} />
+            <Bar dataKey="ventas" fill="#8B5CF6" radius={[6, 6, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
+
+      {/* Income vs Expense Composed */}
+      <div className={chartCardClass}>
+        <h3 className={titleClass}>Ingresos vs Egresos</h3>
+        <ResponsiveContainer width="100%" height={240}>
+          <ComposedChart data={incomeExpenseData}>
+            <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#374151' : '#E5E7EB'} />
+            <XAxis dataKey="month" stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
+            <YAxis stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
+            <Tooltip contentStyle={tooltipStyle} />
+            <Legend wrapperStyle={{ fontSize: '12px' }} />
+            <Bar dataKey="ingresos" fill="#22C55E" radius={[6, 6, 0, 0]} />
+            <Line type="monotone" dataKey="egresos" stroke="#EF4444" strokeWidth={2} />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+
 
       {/* Row 4: Categories and Performance Radar */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Category Production */}
-        <div className={chartCardClass}>
-          <h3 className={titleClass}>Producción por Categoría</h3>
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={categories} layout="horizontal">
-              <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#374151' : '#E5E7EB'} />
-              <XAxis type="number" stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
-              <YAxis dataKey="category" type="category" stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} width={100} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Bar dataKey="produccion" fill={primaryColor} radius={[0, 6, 6, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
 
-        {/* Performance Radar */}
-        <div className={chartCardClass}>
-          <h3 className={titleClass}>Rendimiento Multidimensional</h3>
-          <ResponsiveContainer width="100%" height={240}>
-            <RadarChart data={performanceData}>
-              <PolarGrid stroke={darkMode ? '#374151' : '#E5E7EB'} />
-              <PolarAngleAxis dataKey="metric" stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '11px' }} />
-              <PolarRadiusAxis stroke={darkMode ? '#9CA3AF' : '#6B7280'} />
-              <Radar name="Rendimiento" dataKey="value" stroke={primaryColor} fill={primaryColor} fillOpacity={0.5} />
-              <Tooltip contentStyle={tooltipStyle} />
-            </RadarChart>
-          </ResponsiveContainer>
-        </div>
+      {/* Category Production */}
+      <div className={chartCardClass}>
+        <h3 className={titleClass}>Producción por Categoría</h3>
+        <ResponsiveContainer width="100%" height={240}>
+          <BarChart data={categories} layout="horizontal">
+            <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#374151' : '#E5E7EB'} />
+            <XAxis type="number" stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
+            <YAxis dataKey="category" type="category" stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} width={100} />
+            <Tooltip contentStyle={tooltipStyle} />
+            <Bar dataKey="produccion" fill={primaryColor} radius={[0, 6, 6, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
+
+      {/* Performance Radar */}
+      <div className={chartCardClass}>
+        <h3 className={titleClass}>Rendimiento Multidimensional</h3>
+        <ResponsiveContainer width="100%" height={240}>
+          <RadarChart data={performanceData}>
+            <PolarGrid stroke={darkMode ? '#374151' : '#E5E7EB'} />
+            <PolarAngleAxis dataKey="metric" stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '11px' }} />
+            <PolarRadiusAxis stroke={darkMode ? '#9CA3AF' : '#6B7280'} />
+            <Radar name="Rendimiento" dataKey="value" stroke={primaryColor} fill={primaryColor} fillOpacity={0.5} />
+            <Tooltip contentStyle={tooltipStyle} />
+          </RadarChart>
+        </ResponsiveContainer>
+      </div>
+
 
       {/* Row 5: Top Performers and Health Status */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Top Performers */}
-        <div className={chartCardClass}>
-          <h3 className={titleClass}>Top {selectedLivestock === 'bovinos' ? 'Bovinos' : 'Secciones'} Productivos</h3>
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={topData} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#374151' : '#E5E7EB'} />
-              <XAxis type="number" stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
-              <YAxis dataKey="id" type="category" stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} width={50} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Bar dataKey="production" fill={primaryColor} radius={[0, 6, 6, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
 
-        {/* Health Status Doughnut */}
-        <div className={chartCardClass}>
-          <h3 className={titleClass}>Estado de Salud General</h3>
-          <ResponsiveContainer width="100%" height={240}>
-            <PieChart>
-              <Pie
-                data={healthStatusData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ status, value }) => `${status}: ${value}%`}
-                innerRadius={60}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {healthStatusData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip contentStyle={tooltipStyle} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
+      {/* Top Performers */}
+      <div className={chartCardClass}>
+        <h3 className={titleClass}>Top {selectedLivestock === 'bovinos' ? 'Bovinos' : 'Secciones'} Productivos</h3>
+        <ResponsiveContainer width="100%" height={240}>
+          <BarChart data={topData} layout="vertical">
+            <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#374151' : '#E5E7EB'} />
+            <XAxis type="number" stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
+            <YAxis dataKey="id" type="category" stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} width={50} />
+            <Tooltip contentStyle={tooltipStyle} />
+            <Bar dataKey="production" fill={primaryColor} radius={[0, 6, 6, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
+
+      {/* Health Status Doughnut */}
+      <div className={chartCardClass}>
+        <h3 className={titleClass}>Estado de Salud General</h3>
+        <ResponsiveContainer width="100%" height={240}>
+          <PieChart>
+            <Pie
+              data={healthStatusData}
+              cx="50%"
+              cy="50%"
+              labelLine={false}
+              label={({ status, value }) => `${status}: ${value}%`}
+              innerRadius={60}
+              outerRadius={80}
+              fill="#8884d8"
+              dataKey="value"
+            >
+              {healthStatusData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
+              ))}
+            </Pie>
+            <Tooltip contentStyle={tooltipStyle} />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+
 
       {/* Row 6: Health Indicators Semaforo */}
       <div className={chartCardClass}>
