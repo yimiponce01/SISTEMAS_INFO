@@ -21,74 +21,265 @@ import {
   Area,
   ComposedChart,
 } from 'recharts';
-import { TrendingUp, Award, AlertTriangle, Target } from 'lucide-react';
+import GaugeIndicators from './GaugeIndicators';
+import { useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase';
 
 interface ComparisonViewProps {
   darkMode: boolean;
   dateRange: { from: string; to: string };
 }
 
-const comparisonData = [
-  { category: 'Ingresos', bovinos: 125000, gallinas: 98500 },
-  { category: 'Gastos', bovinos: 45000, gallinas: 38000 },
-  { category: 'Ganancias', bovinos: 80000, gallinas: 60500 },
-  { category: 'Producción', bovinos: 12450, gallinas: 45600 },
-];
-
-const monthlyComparison = [
-  { month: 'Ene', bovinos: 18000, gallinas: 15000, bovinosProduccion: 3200, gallinasProduccion: 8200 },
-  { month: 'Feb', bovinos: 19500, gallinas: 17500, bovinosProduccion: 3400, gallinasProduccion: 8800 },
-  { month: 'Mar', bovinos: 22000, gallinas: 19000, bovinosProduccion: 3800, gallinasProduccion: 9200 },
-  { month: 'Abr', bovinos: 24000, gallinas: 20500, bovinosProduccion: 4100, gallinasProduccion: 9600 },
-  { month: 'May', bovinos: 26500, gallinas: 22000, bovinosProduccion: 4450, gallinasProduccion: 9800 },
-];
-
-const mortalityComparison = [
-  { month: 'Ene', bovinos: 2, gallinas: 12 },
-  { month: 'Feb', bovinos: 3, gallinas: 8 },
-  { month: 'Mar', bovinos: 1, gallinas: 10 },
-  { month: 'Abr', bovinos: 2, gallinas: 9 },
-  { month: 'May', bovinos: 4, gallinas: 11 },
-];
-
-const birthsComparison = [
-  { month: 'Ene', bovinos: 8, gallinas: 45 },
-  { month: 'Feb', bovinos: 12, gallinas: 68 },
-  { month: 'Mar', bovinos: 15, gallinas: 82 },
-  { month: 'Abr', bovinos: 10, gallinas: 72 },
-  { month: 'May', bovinos: 18, gallinas: 95 },
-];
-
-const performanceRadar = [
-  { metric: 'Rentabilidad', bovinos: 85, gallinas: 72 },
-  { metric: 'Productividad', bovinos: 78, gallinas: 88 },
-  { metric: 'Salud', bovinos: 92, gallinas: 84 },
-  { metric: 'Crecimiento', bovinos: 68, gallinas: 82 },
-  { metric: 'Eficiencia', bovinos: 75, gallinas: 79 },
-  { metric: 'Sostenibilidad', bovinos: 81, gallinas: 76 },
-];
-
-const totalRevenue = [
-  { name: 'Bovinos', value: 125000 },
-  { name: 'Gallinas', value: 98500 },
-];
-
-const expenseBreakdown = [
-  { category: 'Alimentación', bovinos: 18000, gallinas: 15000 },
-  { category: 'Salud', bovinos: 12000, gallinas: 9000 },
-  { category: 'Infraestructura', bovinos: 8000, gallinas: 7000 },
-  { category: 'Personal', bovinos: 5000, gallinas: 5000 },
-  { category: 'Otros', bovinos: 2000, gallinas: 2000 },
-];
-
 const COLORS = ['#38BDF8', '#F97316'];
 
+const initialData = {
+  bovinos: {
+    total: 0,
+    production: 0,
+    revenue: 0,
+    expenses: 0,
+    births: 0,
+    deaths: 0,
+    sales: 0,
+    diseases: 0,
+  },
+
+  gallinas: {
+    total: 0,
+    production: 0,
+    revenue: 0,
+    expenses: 0,
+    births: 0,
+    deaths: 0,
+    sales: 0,
+    diseases: 0,
+  },
+
+  monthly: [],
+};
+
 export default function ComparisonView({ darkMode }: ComparisonViewProps) {
-  const chartCardClass = `rounded-xl border p-4 transition-all ${
-    darkMode
-      ? 'bg-slate-800/50 border-slate-700 backdrop-blur-sm'
-      : 'bg-white border-slate-200 shadow-sm'
-  }`;
+  const [dashboardData, setDashboardData] = useState(initialData);
+
+  useEffect(() => {
+
+    const loadData = async () => {
+
+      // ===== BOVINOS =====
+
+      const { data: bovinosAnimales } = await supabase
+        .from('animales')
+        .select('*')
+        .eq('id_tipo', 1);
+
+      const { data: bovinosIngresos } = await supabase
+        .from('ingresos')
+        .select('*')
+        .eq('id_tipo_animal', 1);
+
+      const { data: bovinosGastos } = await supabase
+        .from('gastos')
+        .select('*')
+        .eq('id_tipo_animal', 1);
+
+      const { data: bovinos } = await supabase
+        .from('animales')
+        .select('*')
+        .eq('id_tipo', 1);
+
+      const bovinoIds =
+        (bovinos || []).map((a: any) => a.id_animal);
+
+      const { data: bovinosProduccion } = await supabase
+        .from('produccion')
+        .select('*')
+        .in('id_animal', bovinoIds);
+
+      const { data: bovinosNacimientos } = await supabase
+        .from('nacimientos')
+        .select('*')
+        .eq('id_tipo_animal', 1);
+
+      const { data: bovinosMuertes } = await supabase
+        .from('muertes')
+        .select('*')
+        .eq('id_tipo_animal', 1);
+
+      const { data: bovinosEnfermedades } = await supabase
+        .from('enfermedades')
+        .select('*')
+        .eq('id_tipo_animal', 1);
+
+      // ===== GALLINAS =====
+
+      const { data: gallinasAnimales } = await supabase
+        .from('animales')
+        .select('*')
+        .eq('id_tipo', 2);
+
+      const { data: gallinasIngresos } = await supabase
+        .from('ingresos')
+        .select('*')
+        .eq('id_tipo_animal', 2);
+
+      const { data: gallinasGastos } = await supabase
+        .from('gastos')
+        .select('*')
+        .eq('id_tipo_animal', 2);
+
+      const { data: gallinas } = await supabase
+        .from('animales')
+        .select('*')
+        .eq('id_tipo', 2);
+
+      const gallinaIds =
+        (gallinas || []).map((a: any) => a.id_animal);
+
+      const { data: gallinasProduccion } = await supabase
+        .from('produccion')
+        .select('*')
+        .in('id_animal', gallinaIds);
+
+      const { data: gallinasNacimientos } = await supabase
+        .from('nacimientos')
+        .select('*')
+        .eq('id_tipo_animal', 2);
+
+      const { data: gallinasMuertes } = await supabase
+        .from('muertes')
+        .select('*')
+        .eq('id_tipo_animal', 2);
+
+      const { data: gallinasEnfermedades } = await supabase
+        .from('enfermedades')
+        .select('*')
+        .eq('id_tipo_animal', 2);
+
+      setDashboardData({
+        bovinos: {
+          total: bovinosAnimales?.length || 0,
+
+          production:
+            bovinosProduccion?.reduce(
+              (acc, item) => acc + Number(item.cantidad || 0),
+              0
+            ) || 0,
+
+          revenue:
+            bovinosIngresos?.reduce(
+              (acc, item) => acc + Number(item.monto || 0),
+              0
+            ) || 0,
+
+          expenses:
+            bovinosGastos?.reduce(
+              (acc, item) => acc + Number(item.monto || 0),
+              0
+            ) || 0,
+
+          births: bovinosNacimientos?.length || 0,
+          deaths: bovinosMuertes?.length || 0,
+          sales: bovinosIngresos?.length || 0,
+          diseases: bovinosEnfermedades?.length || 0,
+        },
+
+        gallinas: {
+          total: gallinasAnimales?.length || 0,
+
+          production:
+            gallinasProduccion?.reduce(
+              (acc, item) => acc + Number(item.cantidad || 0),
+              0
+            ) || 0,
+
+          revenue:
+            gallinasIngresos?.reduce(
+              (acc, item) => acc + Number(item.monto || 0),
+              0
+            ) || 0,
+
+          expenses:
+            gallinasGastos?.reduce(
+              (acc, item) => acc + Number(item.monto || 0),
+              0
+            ) || 0,
+
+          births: gallinasNacimientos?.length || 0,
+          deaths: gallinasMuertes?.length || 0,
+          sales: gallinasIngresos?.length || 0,
+          diseases: gallinasEnfermedades?.length || 0,
+        },
+
+        monthly: [],
+      });
+
+    };
+
+    loadData();
+
+  }, []);
+
+  const bovinosProfit = dashboardData.bovinos.revenue - dashboardData.bovinos.expenses;
+  const gallinasProfit = dashboardData.gallinas.revenue - dashboardData.gallinas.expenses;
+  const comparisonData = [
+    { category: 'Ingresos', bovinos: dashboardData.bovinos.revenue, gallinas: dashboardData.gallinas.revenue },
+    { category: 'Gastos', bovinos: dashboardData.bovinos.expenses, gallinas: dashboardData.gallinas.expenses },
+    { category: 'Ganancias', bovinos: bovinosProfit, gallinas: gallinasProfit },
+    { category: 'Producción', bovinos: dashboardData.bovinos.production, gallinas: dashboardData.gallinas.production },
+  ];
+  const monthlyComparison = dashboardData.monthly;
+  const mortalityComparison = dashboardData.monthly.map((item: any) => ({
+    month: item.month,
+    bovinos: item.bovinosMuertes,
+    gallinas: item.gallinasMuertes,
+  }));
+  const birthsComparison = dashboardData.monthly.map((item: any) => ({
+    month: item.month,
+    bovinos: item.bovinosNacimientos,
+    gallinas: item.gallinasNacimientos,
+  }));
+  const totalRevenue = [
+    { name: 'Bovinos', value: dashboardData.bovinos.revenue },
+    { name: 'Gallinas', value: dashboardData.gallinas.revenue },
+  ];
+  const expenseBreakdown = [
+    { category: 'Gastos', bovinos: dashboardData.bovinos.expenses, gallinas: dashboardData.gallinas.expenses },
+    { category: 'Salud', bovinos: dashboardData.bovinos.diseases, gallinas: dashboardData.gallinas.diseases },
+    { category: 'Producción', bovinos: dashboardData.bovinos.production, gallinas: dashboardData.gallinas.production },
+    { category: 'Ventas', bovinos: dashboardData.bovinos.sales, gallinas: dashboardData.gallinas.sales },
+    { category: 'Muertes', bovinos: dashboardData.bovinos.deaths, gallinas: dashboardData.gallinas.deaths },
+  ];
+  const performanceRadar = [
+    {
+      metric: 'Rentabilidad',
+      bovinos: bovinosProfit,
+      gallinas: gallinasProfit,
+    },
+    {
+      metric: 'Producción',
+      bovinos: dashboardData.bovinos.production,
+      gallinas: dashboardData.gallinas.production,
+    },
+    {
+      metric: 'Salud',
+      bovinos: dashboardData.bovinos.diseases,
+      gallinas: dashboardData.gallinas.diseases,
+    },
+    {
+      metric: 'Ventas',
+      bovinos: dashboardData.bovinos.sales,
+      gallinas: dashboardData.gallinas.sales,
+    },
+    {
+      metric: 'Muertes',
+      bovinos: dashboardData.bovinos.deaths,
+      gallinas: dashboardData.gallinas.deaths,
+    },
+  ];
+  const chartCardClass = `rounded-xl border p-4 transition-all ${darkMode
+    ? 'bg-slate-800/50 border-slate-700 backdrop-blur-sm'
+    : 'bg-white border-slate-200 shadow-sm'
+    }`;
 
   const titleClass = `text-base font-light mb-3 ${darkMode ? 'text-white' : 'text-slate-900'}`;
 
@@ -99,90 +290,41 @@ export default function ComparisonView({ darkMode }: ComparisonViewProps) {
     color: darkMode ? '#FFFFFF' : '#000000',
   };
 
-  const insights = [
-    {
-      icon: Award,
-      title: 'Bovinos generaron más ingresos',
-      value: '+27%',
-      color: 'blue',
-      description: 'Los bovinos generaron $26,500 más en ganancias netas',
-    },
-    {
-      icon: TrendingUp,
-      title: 'Gallinas tienen mejor crecimiento',
-      value: '+14%',
-      color: 'orange',
-      description: 'La producción avícola creció más rápido en el último trimestre',
-    },
-    {
-      icon: AlertTriangle,
-      title: 'Mortalidad bovina mayor',
-      value: '3.2%',
-      color: 'red',
-      description: 'La mortalidad bovina es 1.8% mayor que la avícola',
-    },
-    {
-      icon: Target,
-      title: 'Eficiencia avícola superior',
-      value: '+8%',
-      color: 'green',
-      description: 'Las gallinas tienen mejor relación costo-beneficio',
-    },
+  const kpiComparisons = [
+    { title: 'Total Animales', metric: 'Animales', bovinos: dashboardData.bovinos.total, gallinas: dashboardData.gallinas.total },
+    { title: 'Producción Total', metric: 'Producción', bovinos: dashboardData.bovinos.production, gallinas: dashboardData.gallinas.production },
+    { title: 'Ganancias', metric: 'Ganancias', bovinos: bovinosProfit, gallinas: gallinasProfit },
+    { title: 'Gastos', metric: 'Gastos', bovinos: dashboardData.bovinos.expenses, gallinas: dashboardData.gallinas.expenses },
+    { title: 'Nacimientos', metric: 'Nacimientos', bovinos: dashboardData.bovinos.births, gallinas: dashboardData.gallinas.births },
+    { title: 'Muertes', metric: 'Muertes', bovinos: dashboardData.bovinos.deaths, gallinas: dashboardData.gallinas.deaths },
   ];
 
   return (
-    <div className="space-y-4">
-      {/* AI Insights */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {insights.map((insight, idx) => {
-          const Icon = insight.icon;
-          const colorClasses = {
-            blue: {
-              bg: darkMode ? 'bg-blue-500/10' : 'bg-blue-50',
-              border: 'border-blue-200',
-              icon: 'text-blue-600',
-            },
-            orange: {
-              bg: darkMode ? 'bg-orange-500/10' : 'bg-orange-50',
-              border: 'border-orange-200',
-              icon: 'text-orange-600',
-            },
-            red: {
-              bg: darkMode ? 'bg-red-500/10' : 'bg-red-50',
-              border: 'border-red-200',
-              icon: 'text-red-600',
-            },
-            green: {
-              bg: darkMode ? 'bg-green-500/10' : 'bg-green-50',
-              border: 'border-green-200',
-              icon: 'text-green-600',
-            },
-          };
-          const colors = colorClasses[insight.color as keyof typeof colorClasses];
-
-          return (
-            <div key={idx} className={`${chartCardClass} ${colors.bg} border ${colors.border}`}>
-              <div className="flex items-start gap-3">
-                <div className={`p-2 rounded-lg ${colors.bg} border ${colors.border}`}>
-                  <Icon className={`w-5 h-5 ${colors.icon}`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className={`text-xl font-light ${colors.icon} mb-0.5`}>{insight.value}</div>
-                  <div className={`text-xs font-light mb-1 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                    {insight.title}
-                  </div>
-                  <div className={`text-xs font-light ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                    {insight.description}
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {/* Row 1: Category Comparison and Monthly Trends */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="contents">
+        <GaugeIndicators
+          selectedLivestock="both"
+          darkMode={darkMode}
+        />
+
+        {kpiComparisons.map((item) => (
+          <div key={item.title} className={chartCardClass}>
+            <h3 className={titleClass}>{item.title}</h3>
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={[item]}>
+                <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#374151' : '#E5E7EB'} />
+                <XAxis dataKey="metric" stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
+                <YAxis stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
+                <Tooltip contentStyle={tooltipStyle} />
+                <Legend wrapperStyle={{ fontSize: '12px' }} />
+                <Bar dataKey="bovinos" fill="#38BDF8" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="gallinas" fill="#F97316" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        ))}
+
         {/* Comparison Bar Chart */}
         <div className={chartCardClass}>
           <h3 className={titleClass}>Comparación por Categoría</h3>
@@ -217,7 +359,7 @@ export default function ComparisonView({ darkMode }: ComparisonViewProps) {
       </div>
 
       {/* Row 2: Revenue Distribution and Mortality */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="contents">
         {/* Revenue Distribution */}
         <div className={chartCardClass}>
           <h3 className={titleClass}>Distribución de Ingresos Totales</h3>
@@ -260,7 +402,7 @@ export default function ComparisonView({ darkMode }: ComparisonViewProps) {
       </div>
 
       {/* Row 3: Production Comparison and Births */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="contents">
         {/* Production Comparison */}
         <div className={chartCardClass}>
           <h3 className={titleClass}>Comparación de Producción Mensual</h3>
@@ -295,7 +437,7 @@ export default function ComparisonView({ darkMode }: ComparisonViewProps) {
       </div>
 
       {/* Row 4: Performance Radar and Expense Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="contents">
         {/* Performance Radar */}
         <div className={chartCardClass}>
           <h3 className={titleClass}>Análisis de Rendimiento Multidimensional</h3>
@@ -331,3 +473,4 @@ export default function ComparisonView({ darkMode }: ComparisonViewProps) {
     </div>
   );
 }
+

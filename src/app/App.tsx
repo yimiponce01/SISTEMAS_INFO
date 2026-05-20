@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import FilterBar from './components/FilterBar';
@@ -12,25 +11,20 @@ import ExportReports from './components/ExportReports';
 import LoginScreen from './components/LoginScreen';
 import RegisterScreen from './components/RegisterScreen';
 import ForgotPasswordScreen from './components/ForgotPasswordScreen';
-import GaugeIndicators from './components/GaugeIndicators';
 import Toast from './components/Toast';
-import CompactKPICards from './components/CompactKPICards';
-
+import { useEffect, useState } from 'react';
+import { supabase } from './lib/supabase';
 
 type AuthScreen = 'login' | 'register' | 'forgot';
 type DashboardView = 'dashboard' | 'upload' | 'tracking' | 'settings' | 'alerts' | 'export';
 
-interface User {
-  name: string;
-  email: string;
-  role: 'administrador' | 'operador';
-}
+
 
 export default function App() {
   // Authentication state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authScreen, setAuthScreen] = useState<AuthScreen>('login');
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
@@ -39,50 +33,132 @@ export default function App() {
   const [currentView, setCurrentView] = useState<DashboardView>('dashboard');
   const [darkMode, setDarkMode] = useState(false);
   const [selectedLivestock, setSelectedLivestock] = useState<'bovinos' | 'gallinas' | 'both'>('both');
-  const [dateRange, setDateRange] = useState({ from: '2026-01-01', to: '2026-05-15' });
 
+  const today = new Date();
+
+  const firstDay = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    1
+  );
+
+  const [dateRange, setDateRange] = useState({
+    from: firstDay.toISOString().split('T')[0],
+    to: today.toISOString().split('T')[0]
+  });
+  
   // Authentication handlers
-  const handleLogin = (email: string, password: string, rememberMe: boolean) => {
-    // Mock authentication - in production, validate against backend
-    const mockUser: User = {
-      name: email.includes('admin') ? 'Juan Administrador' : 'María Operador',
-      email: email,
-      role: email.includes('admin') ? 'administrador' : 'operador',
-    };
-    setCurrentUser(mockUser);
+  const handleLogin = async (
+    email: string,
+    password: string,
+    rememberMe: boolean
+  ) => {
+
+    const { data, error } =
+      await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+    if (error) {
+
+      setToastMessage(error.message);
+      setShowToast(true);
+
+      return;
+    }
+
+    const user = data.user;
+
+    setCurrentUser({
+      name:
+        user.user_metadata?.name ||
+        'Usuario',
+      email: user.email,
+      role:
+        user.user_metadata?.role ||
+        'operador',
+    });
+
     setIsAuthenticated(true);
 
-    // Show welcome toast
-    const roleText = mockUser.role === 'administrador' ? 'Administrador' : 'Operador';
-    setToastMessage(`¡Bienvenido ${roleText}!`);
+    setToastMessage('¡Bienvenido!');
     setShowToast(true);
+
   };
 
-  const handleRegister = (name: string, email: string, password: string, role: 'administrador' | 'operador') => {
-    // Mock registration - in production, create user in backend
-    const newUser: User = {
-      name: name,
-      email: email,
-      role: role,
-    };
-    setCurrentUser(newUser);
+  const handleRegister = async (
+    name: string,
+    email: string,
+    password: string,
+    role: 'administrador' | 'operador'
+  ) => {
+
+    const { data, error } =
+      await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+            role,
+          }
+        }
+      });
+
+    if (error) {
+
+      setToastMessage(error.message);
+      setShowToast(true);
+
+      return;
+    }
+
+    setCurrentUser({
+      name,
+      email,
+      role,
+    });
+
     setIsAuthenticated(true);
 
-    // Show welcome toast
-    const roleText = role === 'administrador' ? 'Administrador' : 'Operador';
-    setToastMessage(`¡Bienvenido ${roleText}!`);
+    setToastMessage('¡Cuenta creada!');
     setShowToast(true);
+
+  };
+  const handleForgotPassword = async (
+    email: string
+  ) => {
+
+    const { error } =
+      await supabase.auth.resetPasswordForEmail(
+        email
+      );
+
+    if (error) {
+
+      setToastMessage(error.message);
+
+    } else {
+
+      setToastMessage(
+        'Correo de recuperación enviado'
+      );
+
+    }
+
+    setShowToast(true);
+
   };
 
-  const handleForgotPassword = (email: string) => {
-    // Mock password recovery - in production, send recovery email
-    console.log('Password recovery email sent to:', email);
-  };
+  const handleLogout = async () => {
 
-  const handleLogout = () => {
+    await supabase.auth.signOut();
+
     setCurrentUser(null);
     setIsAuthenticated(false);
     setAuthScreen('login');
+
   };
 
   const getPageTitle = () => {
@@ -95,6 +171,38 @@ export default function App() {
     if (selectedLivestock === 'gallinas') return 'Resumen Gallinas';
     return 'Bovinos vs Gallinas';
   };
+
+  useEffect(() => {
+
+    const getSession = async () => {
+
+      const {
+        data: { session }
+      } = await supabase.auth.getSession();
+
+      if (session?.user) {
+
+        setCurrentUser({
+          name:
+            session.user.user_metadata?.name ||
+            'Usuario',
+
+          email: session.user.email,
+
+          role:
+            session.user.user_metadata?.role ||
+            'operador',
+        });
+
+        setIsAuthenticated(true);
+
+      }
+
+    };
+
+    getSession();
+
+  }, []);
 
   // Show authentication screens if not logged in
   if (!isAuthenticated) {
@@ -165,16 +273,8 @@ export default function App() {
                 darkMode={darkMode}
               />
 
-              {/* Gauge Indicators */}
-              <GaugeIndicators
-                selectedLivestock={selectedLivestock}
-                darkMode={darkMode}
-              />
-
               {/* KPI Cards - Different display for 'both' mode */}
-              {selectedLivestock === 'both' ? (
-                <CompactKPICards darkMode={darkMode} />
-              ) : (
+              {selectedLivestock !== 'both' && (
                 <KPICards
                   selectedLivestock={selectedLivestock}
                   dateRange={dateRange}

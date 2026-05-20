@@ -1,4 +1,15 @@
-import { AlertCircle, TrendingUp, Lightbulb, AlertTriangle, CheckCircle, Info } from 'lucide-react';
+import {
+  AlertCircle,
+  TrendingUp,
+  Lightbulb,
+  AlertTriangle,
+  CheckCircle,
+  Info
+} from 'lucide-react';
+
+import { useEffect, useState } from 'react';
+
+import { supabase } from '../lib/supabase';
 
 interface SmartAlertsPanelProps {
   selectedLivestock: 'bovinos' | 'gallinas' | 'both';
@@ -7,62 +18,159 @@ interface SmartAlertsPanelProps {
 }
 
 export default function SmartAlertsPanel({ selectedLivestock, darkMode, fullScreen }: SmartAlertsPanelProps) {
-  const alerts = [
-    {
-      type: 'critical',
-      icon: AlertCircle,
-      title: 'Mortalidad Bovina Aumentó',
-      message: 'La mortalidad bovina aumentó 12% este mes',
-      timestamp: '2h ago',
-      color: 'red',
-      livestock: 'bovinos',
-    },
-    {
-      type: 'warning',
-      icon: AlertTriangle,
-      title: 'Producción Avícola Disminuyó',
-      message: 'La producción de huevos bajó 8% respecto al mes anterior',
-      timestamp: '5h ago',
-      color: 'amber',
-      livestock: 'gallinas',
-    },
-    {
-      type: 'recommendation',
-      icon: Lightbulb,
-      title: 'Aumentar Alimentación',
-      message: 'Se recomienda aumentar alimentación bovina en 15% para mejorar producción',
-      timestamp: '1d ago',
-      color: 'blue',
-      livestock: 'bovinos',
-    },
-    {
-      type: 'prediction',
-      icon: TrendingUp,
-      title: 'Ganancias Proyectadas',
-      message: 'Las ganancias aumentarán un 20% en junio según tendencias actuales',
-      timestamp: '2d ago',
-      color: 'green',
-      livestock: 'both',
-    },
-    {
-      type: 'info',
-      icon: Info,
-      title: 'Temporada de Incubación',
-      message: 'Período óptimo para aumentar incubaciones en las próximas 2 semanas',
-      timestamp: '3d ago',
-      color: 'purple',
-      livestock: 'gallinas',
-    },
-    {
-      type: 'success',
-      icon: CheckCircle,
-      title: 'Meta de Ventas Alcanzada',
-      message: 'Se superó la meta de ventas mensuales en un 15%',
-      timestamp: '4d ago',
-      color: 'green',
-      livestock: 'both',
-    },
-  ];
+  const [alerts, setAlerts] = useState<any[]>([]);
+
+  useEffect(() => {
+
+    const loadAlerts = async () => {
+
+      const tipoId =
+        selectedLivestock === 'bovinos'
+          ? 1
+          : selectedLivestock === 'gallinas'
+            ? 2
+            : null;
+
+      // ===== CARGAR TABLAS =====
+
+const { data: animales } = await supabase
+  .from('animales')
+  .select('*')
+  .in('id_tipo', tipoId ? [tipoId] : [1, 2]);
+
+const { data: produccion } = await supabase
+  .from('produccion')
+  .select('*')
+  .in('id_tipo_animal', tipoId ? [tipoId] : [1, 2]);
+
+const { data: muertes } = await supabase
+  .from('muertes')
+  .select('*')
+  .in('id_tipo_animal', tipoId ? [tipoId] : [1, 2]);
+
+const { data: enfermedades } = await supabase
+  .from('enfermedades')
+  .select('*')
+  .in('id_tipo_animal', tipoId ? [tipoId] : [1, 2]);
+
+const { data: ingresos } = await supabase
+  .from('ingresos')
+  .select('*')
+  .in('id_tipo_animal', tipoId ? [tipoId] : [1, 2]);
+
+const { data: gastos } = await supabase
+  .from('gastos')
+  .select('*')
+  .in('id_tipo_animal', tipoId ? [tipoId] : [1, 2]);
+
+const generatedAlerts: any[] = [];
+
+// ===== MUERTES =====
+
+if ((muertes?.length || 0) > 0) {
+
+  generatedAlerts.push({
+    type: 'critical',
+    icon: AlertCircle,
+    title: 'Muertes Registradas',
+    message: `Se registraron ${muertes?.length || 0} muertes en el sistema`,
+    timestamp: 'Ahora',
+    color: 'red',
+    livestock: selectedLivestock,
+  });
+
+}
+
+// ===== ENFERMEDADES =====
+
+if ((enfermedades?.length || 0) > 0) {
+
+  generatedAlerts.push({
+    type: 'warning',
+    icon: AlertTriangle,
+    title: 'Enfermedades Detectadas',
+    message: `Hay ${enfermedades?.length || 0} registros de enfermedades`,
+    timestamp: 'Ahora',
+    color: 'amber',
+    livestock: selectedLivestock,
+  });
+
+}
+
+// ===== PRODUCCION =====
+
+const totalProduccion =
+  produccion?.reduce(
+    (acc: number, item: any) =>
+      acc + Number(item.produccion || 0),
+    0
+  ) || 0;
+
+if (totalProduccion > 0) {
+
+  generatedAlerts.push({
+    type: 'success',
+    icon: TrendingUp,
+    title: 'Producción Registrada',
+    message: `La producción total actual es ${totalProduccion}`,
+    timestamp: 'Ahora',
+    color: 'green',
+    livestock: selectedLivestock,
+  });
+
+}
+
+// ===== GANANCIAS =====
+
+const totalIngresos =
+  ingresos?.reduce(
+    (acc: number, item: any) =>
+      acc + Number(item.monto || 0),
+    0
+  ) || 0;
+
+const totalGastos =
+  gastos?.reduce(
+    (acc: number, item: any) =>
+      acc + Number(item.monto || 0),
+    0
+  ) || 0;
+
+const ganancias = totalIngresos - totalGastos;
+
+generatedAlerts.push({
+  type: 'info',
+  icon: Info,
+  title: 'Balance General',
+  message: `Ganancia total actual: $${ganancias.toLocaleString()}`,
+  timestamp: 'Ahora',
+  color: ganancias >= 0 ? 'green' : 'red',
+  livestock: selectedLivestock,
+});
+
+// ===== RECOMENDACION =====
+
+if ((animales?.length || 0) > 0) {
+
+  generatedAlerts.push({
+    type: 'recommendation',
+    icon: Lightbulb,
+    title: 'Sistema Activo',
+    message: 'Continúa registrando producción y eventos diariamente',
+    timestamp: 'Ahora',
+    color: 'blue',
+    livestock: selectedLivestock,
+  });
+
+}
+
+      setAlerts(generatedAlerts);
+
+    };
+
+    loadAlerts();
+
+  }, [selectedLivestock]);
 
   const filteredAlerts = alerts.filter(alert =>
     selectedLivestock === 'both' || alert.livestock === selectedLivestock || alert.livestock === 'both'
@@ -103,11 +211,10 @@ export default function SmartAlertsPanel({ selectedLivestock, darkMode, fullScre
 
   return (
     <div className={`${fullScreen ? 'w-full' : 'w-full'} ${fullScreen ? '' : 'sticky top-24'}`}>
-      <div className={`rounded-xl border overflow-hidden ${
-        darkMode
-          ? 'bg-slate-800/50 border-slate-700 backdrop-blur-sm'
-          : 'bg-white border-slate-200 shadow-sm'
-      }`}>
+      <div className={`rounded-xl border overflow-hidden ${darkMode
+        ? 'bg-slate-800/50 border-slate-700 backdrop-blur-sm'
+        : 'bg-white border-slate-200 shadow-sm'
+        }`}>
         <div className={`p-4 border-b ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
           <h3 className={`text-base font-light ${darkMode ? 'text-white' : 'text-slate-900'}`}>
             Alertas Inteligentes
@@ -124,9 +231,8 @@ export default function SmartAlertsPanel({ selectedLivestock, darkMode, fullScre
             return (
               <div
                 key={idx}
-                className={`p-4 border-b transition-all hover:bg-opacity-70 hover:scale-[1.02] cursor-pointer ${
-                  darkMode ? 'border-slate-700' : 'border-slate-100'
-                } ${colors.bg} last:border-b-0`}
+                className={`p-4 border-b transition-all hover:bg-opacity-70 hover:scale-[1.02] cursor-pointer ${darkMode ? 'border-slate-700' : 'border-slate-100'
+                  } ${colors.bg} last:border-b-0`}
               >
                 <div className="flex gap-3">
                   <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${colors.bg} border ${colors.border}`}>

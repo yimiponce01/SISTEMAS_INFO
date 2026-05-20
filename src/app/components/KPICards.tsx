@@ -1,4 +1,18 @@
-import { TrendingUp, TrendingDown, Users, DollarSign, Activity, AlertTriangle, ShoppingCart, Heart, Egg } from 'lucide-react';
+import {
+  TrendingUp,
+  TrendingDown,
+  Users,
+  DollarSign,
+  Activity,
+  AlertTriangle,
+  ShoppingCart,
+  Heart,
+  Egg
+} from 'lucide-react';
+
+import { useEffect, useState } from 'react';
+
+import { supabase } from '../lib/supabase';
 
 interface KPICardsProps {
   selectedLivestock: 'bovinos' | 'gallinas' | 'both';
@@ -6,48 +20,162 @@ interface KPICardsProps {
   darkMode: boolean;
 }
 
-const mockData = {
-  bovinos: {
-    total: 248,
-    production: 12450,
-    revenue: 125000,
-    expenses: 45000,
-    births: 34,
-    deaths: 8,
-    sales: 22,
-    diseases: 5,
-  },
-  gallinas: {
-    total: 1842,
-    production: 45600,
-    revenue: 98500,
-    expenses: 38000,
-    births: 324,
-    deaths: 48,
-    sales: 156,
-    diseases: 12,
-    incubations: 280,
-  }
-};
+
 
 export default function KPICards({ selectedLivestock, darkMode }: KPICardsProps) {
-  const getKPIs = () => {
-    if (selectedLivestock === 'bovinos') return mockData.bovinos;
-    if (selectedLivestock === 'gallinas') return mockData.gallinas;
-    return {
-      total: mockData.bovinos.total + mockData.gallinas.total,
-      production: mockData.bovinos.production + mockData.gallinas.production,
-      revenue: mockData.bovinos.revenue + mockData.gallinas.revenue,
-      expenses: mockData.bovinos.expenses + mockData.gallinas.expenses,
-      births: mockData.bovinos.births + mockData.gallinas.births,
-      deaths: mockData.bovinos.deaths + mockData.gallinas.deaths,
-      sales: mockData.bovinos.sales + mockData.gallinas.sales,
-      diseases: mockData.bovinos.diseases + mockData.gallinas.diseases,
-    };
-  };
+  const [data, setData] = useState({
+    total: 0,
+    production: 0,
+    revenue: 0,
+    income: 0,
+    expenses: 0,
+    births: 0,
+    deaths: 0,
+    sales: 0,
+    diseases: 0,
+    incubations: 0,
+  });
 
-  const data = getKPIs();
-  const profit = data.revenue - data.expenses;
+  useEffect(() => {
+
+    const loadDashboardData = async () => {
+
+      // ===== ANIMALES =====
+
+      const { data: animales, error: animalesError } = await supabase
+        .from('animales')
+        .select('*')
+        .in(
+          'id_tipo',
+          selectedLivestock === 'both'
+            ? [1, 2]
+            : selectedLivestock === 'bovinos'
+              ? [1]
+              : [2]
+        );
+      const animalIds = animales?.map(a => a.id_animal) || [];
+      console.log('TIPO SELECCIONADO:', selectedLivestock);
+      console.log('ANIMAL IDS:', animalIds);
+      console.log('ANIMALES:', animales);
+      console.log('ERROR ANIMALES:', animalesError);
+      console.log('DATA ANIMALES:', animales);
+
+      // ===== NACIMIENTOS =====
+
+      const { data: nacimientos } = await supabase
+        .from('nacimientos')
+        .select('*')
+        .or(
+          `id_madre.in.(${animalIds.join(',')}),id_padre.in.(${animalIds.join(',')})`
+        );
+
+      // ===== MUERTES =====
+
+      const { data: muertes } = await supabase
+        .from('muertes')
+        .select('*')
+        .in('id_animal', animalIds);
+
+      // ===== INGRESOS =====
+
+      const { data: ingresos } =
+        await supabase
+          .from('ingresos')
+          .select('*')
+          .in('id_animal', animalIds);
+
+      // ===== PRODUCCION =====
+
+      const { data: produccion } = await supabase
+        .from('produccion')
+        .select('*')
+        .in('id_animal', animalIds);
+
+      console.log('PRODUCCION:', produccion);
+      // ===== GASTOS =====
+
+      const { data: gastos } = await supabase
+        .from('gastos')
+        .select('*')
+        .in(
+          'id_tipo_animal',
+          selectedLivestock === 'both'
+            ? [1, 2]
+            : selectedLivestock === 'bovinos'
+              ? [1]
+              : [2]
+        );
+
+      // ===== ENFERMEDADES =====
+
+      const { data: enfermedades } = await supabase
+        .from('enfermedades')
+        .select('*')
+        .in('id_animal', animalIds);
+
+
+      // ===== INCUBACION =====
+      let incubacion = [];
+
+      if (
+        selectedLivestock === 'gallinas' ||
+        selectedLivestock === 'both'
+      ) {
+
+        const { data } = await supabase
+          .from('incubacion')
+          .select('*');
+
+        incubacion = data || [];
+      }
+
+
+
+      // ===== CALCULOS =====
+
+      const totalProduccion =
+        produccion?.reduce(
+          (acc, item) => acc + Number(item.cantidad || 0),
+          0
+        ) || 0;
+
+      const totalRevenue =
+        ingresos?.reduce(
+          (acc, item) => acc + Number(item.monto || 0),
+          0
+        ) || 0;
+
+      const totalExpenses =
+        gastos?.reduce(
+          (acc, item) => acc + Number(item.monto || 0),
+          0
+        ) || 0;
+
+      const totalGanancias =
+        totalRevenue - totalExpenses;
+
+
+      // ===== GUARDAR =====
+
+      setData({
+        total: animales?.length || 0,
+        production: totalProduccion,
+        revenue: totalGanancias,
+        income: totalRevenue,
+        expenses: totalExpenses,
+        births: nacimientos?.length || 0,
+        deaths: muertes?.length || 0,
+        sales: ingresos?.length || 0,
+        diseases: enfermedades?.length || 0,
+        incubations: incubacion?.length || 0,
+      });
+
+    };
+
+    loadDashboardData();
+
+  }, [selectedLivestock]);
+  const profit = data.revenue;
 
   const cards = [
     {
@@ -74,6 +202,15 @@ export default function KPICards({ selectedLivestock, darkMode }: KPICardsProps)
       trend: '+15%',
       positive: true,
       color: 'green',
+    },
+    {
+      title: 'Ingresos',
+      value: `$${Number(data.income || 0).toFixed(2)}`,
+      icon: DollarSign,
+      change: '+15%',
+      trend: 'up',
+      color: 'green',
+      gradient: 'from-green-500 to-emerald-500',
     },
     {
       title: 'Gastos',
@@ -120,7 +257,7 @@ export default function KPICards({ selectedLivestock, darkMode }: KPICardsProps)
   if (selectedLivestock === 'gallinas' || selectedLivestock === 'both') {
     cards.push({
       title: 'Incubaciones',
-      value: (mockData.gallinas.incubations || 0).toLocaleString(),
+      value: (data.incubations || 0).toLocaleString(),
       icon: Egg,
       trend: '+18%',
       positive: true,
@@ -187,11 +324,10 @@ export default function KPICards({ selectedLivestock, darkMode }: KPICardsProps)
         return (
           <div
             key={idx}
-            className={`relative overflow-hidden rounded-lg border transition-all hover:shadow-lg hover:-translate-y-0.5 ${
-              darkMode
-                ? 'bg-slate-800/50 border-slate-700 backdrop-blur-sm'
-                : 'bg-white border-slate-200 shadow-sm'
-            }`}
+            className={`relative overflow-hidden rounded-lg border transition-all hover:shadow-lg hover:-translate-y-0.5 ${darkMode
+              ? 'bg-slate-800/50 border-slate-700 backdrop-blur-sm'
+              : 'bg-white border-slate-200 shadow-sm'
+              }`}
           >
             {/* Gradient overlay */}
             <div className={`absolute top-0 right-0 w-16 h-16 bg-gradient-to-br ${colors.gradient} opacity-10 rounded-full blur-xl`} />

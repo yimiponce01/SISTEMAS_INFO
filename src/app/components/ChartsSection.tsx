@@ -21,103 +21,587 @@ import {
   Radar,
   ComposedChart,
 } from 'recharts';
+import GaugeIndicators from './GaugeIndicators';
+import { supabase } from '../lib/supabase';
+import { useEffect, useState } from 'react';
 
 interface ChartsSectionProps {
-  selectedLivestock: 'bovinos' | 'gallinas';
+  selectedLivestock:
+  | 'bovinos'
+  | 'gallinas'
+  | 'both';
   dateRange: { from: string; to: string };
   darkMode: boolean;
 }
 
-const monthlyProductionData = [
-  { month: 'Ene', produccion: 3200, nacimientos: 8, muertes: 2, gastos: 12000, ganancias: 18000, ventas: 5 },
-  { month: 'Feb', produccion: 3400, nacimientos: 12, muertes: 3, gastos: 11500, ganancias: 19500, ventas: 7 },
-  { month: 'Mar', produccion: 3800, nacimientos: 15, muertes: 1, gastos: 13000, ganancias: 22000, ventas: 6 },
-  { month: 'Abr', produccion: 4100, nacimientos: 10, muertes: 2, gastos: 12800, ganancias: 24000, ventas: 8 },
-  { month: 'May', produccion: 4450, nacimientos: 18, muertes: 4, gastos: 14000, ganancias: 26500, ventas: 9 },
-];
-
-const monthlyProductionGallinas = [
-  { month: 'Ene', produccion: 8200, nacimientos: 45, muertes: 12, gastos: 8000, ganancias: 15000, ventas: 28 },
-  { month: 'Feb', produccion: 8800, nacimientos: 68, muertes: 8, gastos: 7500, ganancias: 17500, ventas: 35 },
-  { month: 'Mar', produccion: 9200, nacimientos: 82, muertes: 10, gastos: 8200, ganancias: 19000, ventas: 42 },
-  { month: 'Abr', produccion: 9600, nacimientos: 72, muertes: 9, gastos: 8500, ganancias: 20500, ventas: 38 },
-  { month: 'May', produccion: 9800, nacimientos: 95, muertes: 11, gastos: 9000, ganancias: 22000, ventas: 45 },
-];
-
-const distributionData = [
-  { name: 'Producción', value: 42 },
-  { name: 'Ventas', value: 28 },
-  { name: 'Reserva', value: 30 },
-];
-
-const categoryData = [
-  { category: 'Holstein', cantidad: 85, produccion: 3800 },
-  { category: 'Jersey', cantidad: 62, produccion: 2900 },
-  { category: 'Brown Swiss', cantidad: 48, produccion: 2200 },
-  { category: 'Angus', cantidad: 35, produccion: 1600 },
-];
-
-const categoryGallinasData = [
-  { category: 'Leghorn', cantidad: 485, produccion: 12800 },
-  { category: 'Rhode Island', cantidad: 362, produccion: 9200 },
-  { category: 'Plymouth Rock', cantidad: 298, produccion: 7400 },
-  { category: 'Sussex', cantidad: 215, produccion: 5600 },
-];
-
-const performanceData = [
-  { metric: 'Producción', value: 85 },
-  { metric: 'Salud', value: 92 },
-  { metric: 'Crecimiento', value: 78 },
-  { metric: 'Nutrición', value: 88 },
-  { metric: 'Rentabilidad', value: 82 },
-  { metric: 'Eficiencia', value: 79 },
-];
-
-const incomeExpenseData = [
-  { month: 'Ene', ingresos: 28000, egresos: 12000 },
-  { month: 'Feb', ingresos: 31000, egresos: 11500 },
-  { month: 'Mar', ingresos: 35000, egresos: 13000 },
-  { month: 'Abr', ingresos: 36800, egresos: 12800 },
-  { month: 'May', ingresos: 40500, egresos: 14000 },
-];
-
-const healthStatusData = [
-  { status: 'Excelente', value: 82, color: '#22C55E' },
-  { status: 'Bueno', value: 12, color: '#EAB308' },
-  { status: 'Regular', value: 4, color: '#F97316' },
-  { status: 'Crítico', value: 2, color: '#EF4444' },
-];
-
-const topAnimalsData = [
-  { id: 'B-001', production: 450, name: 'Vaca Holstein A' },
-  { id: 'B-045', production: 420, name: 'Vaca Jersey B' },
-  { id: 'B-023', production: 395, name: 'Vaca Holstein C' },
-  { id: 'B-078', production: 380, name: 'Vaca Brown D' },
-  { id: 'B-012', production: 365, name: 'Vaca Holstein E' },
-];
-
-const topGallinasData = [
-  { id: 'G-234', production: 285, name: 'Sección A' },
-  { id: 'G-189', production: 278, name: 'Sección B' },
-  { id: 'G-412', production: 265, name: 'Sección C' },
-  { id: 'G-567', production: 248, name: 'Sección D' },
-  { id: 'G-098', production: 232, name: 'Sección E' },
-];
-
 const COLORS = ['#38BDF8', '#F97316', '#22C55E', '#EAB308', '#EF4444'];
 
-export default function ChartsSection({ selectedLivestock, darkMode }: ChartsSectionProps) {
-  const productionData = selectedLivestock === 'bovinos' ? monthlyProductionData : monthlyProductionGallinas;
-  const topData = selectedLivestock === 'bovinos' ? topAnimalsData : topGallinasData;
-  const categories = selectedLivestock === 'bovinos' ? categoryData : categoryGallinasData;
-  const primaryColor = selectedLivestock === 'bovinos' ? '#38BDF8' : '#F97316';
-  const secondaryColor = selectedLivestock === 'bovinos' ? '#3B82F6' : '#FB923C';
+export default function ChartsSection({
+  selectedLivestock,
+  dateRange,
+  darkMode
+}: ChartsSectionProps) {
 
-  const chartCardClass = `rounded-xl border p-4 transition-all ${
-    darkMode
-      ? 'bg-slate-800/50 border-slate-700 backdrop-blur-sm'
-      : 'bg-white border-slate-200 shadow-sm'
-  }`;
+  const [monthlyData, setMonthlyData] =
+    useState<any[]>([]);
+
+
+
+  useEffect(() => {
+
+    const loadChartsData = async () => {
+
+      const tipo =
+        selectedLivestock === 'bovinos'
+          ? 1
+          : 2;
+
+      const { data: animales = [] } = await supabase
+        .from('animales')
+        .select('*')
+        .in(
+          'id_tipo',
+          selectedLivestock === 'bovinos'
+            ? [1]
+            : [2]
+        );
+
+      const animalIds =
+        (animales || []).map(
+          (a: any) => a.id_animal
+        );
+
+      // ===== PRODUCCION =====
+
+      const { data: produccion } =
+        await supabase
+          .from('produccion')
+          .select('*')
+          .in('id_animal', animalIds);
+
+      // ===== NACIMIENTOS =====
+
+      const { data: nacimientos } =
+        await supabase
+          .from('nacimientos')
+          .select('*')
+          .or(
+            `id_madre.in.(${animalIds.join(',')}),id_padre.in.(${animalIds.join(',')})`
+          );
+
+      // ===== MUERTES =====
+
+      const { data: muertes } =
+        await supabase
+          .from('muertes')
+          .select('*')
+          .in('id_animal', animalIds);
+
+      // ===== INGRESOS =====
+
+      const { data: ingresos } =
+        await supabase
+          .from('ingresos')
+          .select('*')
+          .in(
+            'id_tipo_animal',
+            selectedLivestock === 'both'
+              ? [1, 2]
+              : selectedLivestock === 'bovinos'
+                ? [1]
+                : [2]
+          );
+
+      // ===== GASTOS =====
+
+      const { data: gastos } =
+        await supabase
+          .from('gastos')
+          .select('*')
+          .eq('id_tipo_animal', tipo);
+
+
+
+      // =========================
+      // PRODUCCION DATA
+      // =========================
+
+      const totalProduccion =
+        produccion?.reduce(
+          (acc: number, item: any) =>
+            acc + Number(item.produccion || 0),
+          0
+        ) || 0;
+
+      const totalRevenue =
+        ingresos?.reduce(
+          (acc: number, item: any) =>
+            acc + Number(item.monto || 0),
+          0
+        ) || 0;
+
+      const totalGastos =
+        gastos?.reduce(
+          (acc: number, item: any) =>
+            acc + Number(item.monto || 0),
+          0
+        ) || 0;
+
+      const months = [
+        'Ene',
+        'Feb',
+        'Mar',
+        'Abr',
+        'May',
+        'Jun',
+        'Jul',
+        'Ago',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dic'
+      ];
+
+      const monthlyMap: any = {};
+
+      months.forEach((month) => {
+        monthlyMap[month] = {
+          month,
+
+          bovinosProduccion: 0,
+          gallinasProduccion: 0,
+
+          bovinosNacimientos: 0,
+          gallinasNacimientos: 0,
+
+          bovinosMuertes: 0,
+          gallinasMuertes: 0,
+
+          bovinosGastos: 0,
+          gallinasGastos: 0,
+
+          bovinosGanancias: 0,
+          gallinasGanancias: 0,
+
+          bovinosVentas: 0,
+          gallinasVentas: 0,
+
+          bovinosIngresos: 0,
+          gallinasIngresos: 0,
+        };
+      });
+
+      produccion?.forEach((item: any) => {
+
+        const date = new Date(item.fecha);
+
+        const month =
+          months[date.getMonth()];
+
+        if (selectedLivestock === 'bovinos') {
+
+          monthlyMap[month]
+            .bovinosProduccion +=
+            Number(item.cantidad || 0);
+
+        } else {
+
+          monthlyMap[month]
+            .gallinasProduccion +=
+            Number(item.cantidad || 0);
+
+        }
+
+      });
+
+      ingresos?.forEach((item: any) => {
+
+        const date = new Date(item.fecha);
+
+        const month =
+          months[date.getMonth()];
+
+        if (selectedLivestock === 'bovinos') {
+
+          monthlyMap[month]
+            .bovinosIngresos +=
+            Number(item.monto || 0);
+
+          monthlyMap[month]
+            .bovinosVentas += 1;
+
+        } else {
+
+          monthlyMap[month]
+            .gallinasIngresos +=
+            Number(item.monto || 0);
+
+          monthlyMap[month]
+            .gallinasVentas += 1;
+
+        }
+
+      });
+
+      gastos?.forEach((item: any) => {
+
+        const date = new Date(item.fecha);
+
+        const month =
+          months[date.getMonth()];
+
+        if (selectedLivestock === 'bovinos') {
+
+          monthlyMap[month]
+            .bovinosGastos +=
+            Number(item.monto || 0);
+
+        } else {
+
+          monthlyMap[month]
+            .gallinasGastos +=
+            Number(item.monto || 0);
+
+        }
+
+      });
+
+      nacimientos?.forEach((item: any) => {
+
+        const date =
+          new Date(item.fecha_nacimiento);
+
+        const month =
+          months[date.getMonth()];
+
+        if (selectedLivestock === 'bovinos') {
+
+          monthlyMap[month]
+            .bovinosNacimientos += 1;
+
+        } else {
+
+          monthlyMap[month]
+            .gallinasNacimientos += 1;
+
+        }
+
+      });
+
+      muertes?.forEach((item: any) => {
+
+        const date =
+          new Date(item.fecha_muerte);
+
+        const month =
+          months[date.getMonth()];
+
+        if (selectedLivestock === 'bovinos') {
+
+          monthlyMap[month]
+            .bovinosMuertes += 1;
+
+        } else {
+
+          monthlyMap[month]
+            .gallinasMuertes += 1;
+
+        }
+
+      });
+
+      Object.values(monthlyMap)
+        .forEach((item: any) => {
+
+          item.bovinosGanancias =
+            item.bovinosIngresos -
+            item.bovinosGastos;
+
+          item.gallinasGanancias =
+            item.gallinasIngresos -
+            item.gallinasGastos;
+
+        });
+
+      setMonthlyData(
+        Object.values(monthlyMap)
+      );
+
+      const totalAnimales =
+        animales?.length || 0;
+
+      const totalMuertes =
+        muertes?.length || 0;
+
+      const saludables =
+        Math.max(
+          totalAnimales - totalMuertes,
+          0
+        );
+
+
+
+    };
+
+    loadChartsData();
+
+  }, [selectedLivestock]);
+
+  const productionData = monthlyData.map((item: any) => ({
+    month: item.month,
+
+    produccion:
+      selectedLivestock === 'bovinos'
+        ? item.bovinosProduccion
+        : item.gallinasProduccion,
+
+    nacimientos:
+      selectedLivestock === 'bovinos'
+        ? item.bovinosNacimientos
+        : item.gallinasNacimientos,
+
+    muertes:
+      selectedLivestock === 'bovinos'
+        ? item.bovinosMuertes
+        : item.gallinasMuertes,
+
+    gastos:
+      selectedLivestock === 'bovinos'
+        ? item.bovinosGastos
+        : item.gallinasGastos,
+
+    ganancias:
+      selectedLivestock === 'bovinos'
+        ? item.bovinosGanancias
+        : item.gallinasGanancias,
+
+    ventas:
+      selectedLivestock === 'bovinos'
+        ? item.bovinosVentas
+        : item.gallinasVentas,
+  }));
+
+  const incomeExpenseData = monthlyData.map((item: any) => ({
+    month: item.month,
+    ingresos:
+      selectedLivestock === 'bovinos'
+        ? item.bovinosIngresos
+        : item.gallinasIngresos,
+
+    gastos:
+      selectedLivestock === 'bovinos'
+        ? item.bovinosGastos
+        : item.gallinasGastos,
+  }));
+
+  const distributionData = [
+    {
+      name: 'Producción',
+      value:
+        productionData.reduce(
+          (acc: number, item: any) =>
+            acc + Number(item.produccion || 0),
+          0
+        ),
+    },
+
+    {
+      name: 'Ventas',
+      value:
+        productionData.reduce(
+          (acc: number, item: any) =>
+            acc + Number(item.ventas || 0),
+          0
+        ),
+    },
+
+    {
+      name: 'Ganancias',
+      value:
+        productionData.reduce(
+          (acc: number, item: any) =>
+            acc + Number(item.ganancias || 0),
+          0
+        ),
+    },
+  ];
+
+  const categories = [
+    {
+      category:
+        selectedLivestock === 'bovinos'
+          ? 'Bovinos'
+          : 'Gallinas',
+
+      produccion:
+        productionData.reduce(
+          (acc: number, item: any) =>
+            acc + Number(item.produccion || 0),
+          0
+        ),
+    },
+
+    {
+      category: 'Nacimientos',
+
+      produccion:
+        productionData.reduce(
+          (acc: number, item: any) =>
+            acc + Number(item.nacimientos || 0),
+          0
+        ),
+    },
+
+    {
+      category: 'Ventas',
+
+      produccion:
+        productionData.reduce(
+          (acc: number, item: any) =>
+            acc + Number(item.ventas || 0),
+          0
+        ),
+    },
+  ];
+
+  const performanceData = [
+    {
+      metric: 'Producción',
+      value:
+        productionData.reduce(
+          (acc: number, item: any) =>
+            acc + Number(item.produccion || 0),
+          0
+        ),
+    },
+
+    {
+      metric: 'Ventas',
+      value:
+        productionData.reduce(
+          (acc: number, item: any) =>
+            acc + Number(item.ventas || 0),
+          0
+        ),
+    },
+
+    {
+      metric: 'Ganancias',
+      value:
+        productionData.reduce(
+          (acc: number, item: any) =>
+            acc + Number(item.ganancias || 0),
+          0
+        ),
+    },
+
+    {
+      metric: 'Nacimientos',
+      value:
+        productionData.reduce(
+          (acc: number, item: any) =>
+            acc + Number(item.nacimientos || 0),
+          0
+        ),
+    },
+
+    {
+      metric: 'Muertes',
+      value:
+        productionData.reduce(
+          (acc: number, item: any) =>
+            acc + Number(item.muertes || 0),
+          0
+        ),
+    },
+  ];
+
+  const totalMuertes =
+    productionData.reduce(
+      (acc: number, item: any) =>
+        acc + Number(item.muertes || 0),
+      0
+    );
+
+  const totalNacimientos =
+    productionData.reduce(
+      (acc: number, item: any) =>
+        acc + Number(item.nacimientos || 0),
+      0
+    );
+
+  const totalProduccion =
+    productionData.reduce(
+      (acc: number, item: any) =>
+        acc + Number(item.produccion || 0),
+      0
+    );
+
+  const healthStatusData = [
+    {
+      status: 'Excelente',
+      value:
+        totalProduccion > 0
+          ? Math.max(
+            0,
+            100 - totalMuertes * 5
+          )
+          : 0,
+      color: '#22C55E',
+    },
+
+    {
+      status: 'En Tratamiento',
+      value:
+        totalNacimientos > 0
+          ? Math.min(
+            100,
+            totalNacimientos
+          )
+          : 0,
+      color: '#EAB308',
+    },
+
+    {
+      status: 'Crítico',
+      value: totalMuertes,
+      color: '#EF4444',
+    },
+  ];
+
+  const topData =
+    productionData
+      .map((item: any, index: number) => ({
+        id: `${selectedLivestock === 'bovinos' ? 'B' : 'G'}-${index + 1}`,
+
+        production:
+          Number(item.produccion || 0),
+
+        name:
+          selectedLivestock === 'bovinos'
+            ? `Bovino ${index + 1}`
+            : `Gallina ${index + 1}`,
+      }))
+      .sort(
+        (a: any, b: any) =>
+          b.production - a.production
+      )
+      .slice(0, 5);
+
+  const primaryColor =
+    selectedLivestock === 'bovinos'
+      ? '#38BDF8'
+      : '#F97316';
+
+  const secondaryColor =
+    selectedLivestock === 'bovinos'
+      ? '#3B82F6'
+      : '#FB923C';
+
+  const chartCardClass = `rounded-xl border p-4 transition-all ${darkMode
+    ? 'bg-slate-800/50 border-slate-700 backdrop-blur-sm'
+    : 'bg-white border-slate-200 shadow-sm'
+    }`;
 
   const titleClass = `text-base font-light mb-3 ${darkMode ? 'text-white' : 'text-slate-900'}`;
 
@@ -132,6 +616,11 @@ export default function ChartsSection({ selectedLivestock, darkMode }: ChartsSec
     <div className="space-y-4">
       {/* Row 1: Production and Financial */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <GaugeIndicators
+          selectedLivestock={selectedLivestock}
+          darkMode={darkMode}
+        />
+
         {/* Monthly Production Bar Chart */}
         <div className={chartCardClass}>
           <h3 className={titleClass}>Producción Mensual</h3>
@@ -320,21 +809,27 @@ export default function ChartsSection({ selectedLivestock, darkMode }: ChartsSec
         <div className="grid grid-cols-3 gap-4 mt-4">
           <div className={`p-4 rounded-lg ${darkMode ? 'bg-green-500/10' : 'bg-green-50'} border border-green-200`}>
             <div className="text-center">
-              <div className="text-3xl font-light text-green-600 mb-1">92%</div>
+              <div className="text-3xl font-light text-green-600 mb-1">
+                {healthStatusData[0]?.value || 0}%
+              </div>
               <div className={`text-sm ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>Salud Excelente</div>
               <div className="w-12 h-12 mx-auto mt-2 rounded-full bg-green-500"></div>
             </div>
           </div>
           <div className={`p-4 rounded-lg ${darkMode ? 'bg-amber-500/10' : 'bg-amber-50'} border border-amber-200`}>
             <div className="text-center">
-              <div className="text-3xl font-light text-amber-600 mb-1">6%</div>
+              <div className="text-3xl font-light text-amber-600 mb-1">
+                {healthStatusData[1]?.value || 0}%
+              </div>
               <div className={`text-sm ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>En Tratamiento</div>
               <div className="w-12 h-12 mx-auto mt-2 rounded-full bg-amber-500"></div>
             </div>
           </div>
           <div className={`p-4 rounded-lg ${darkMode ? 'bg-red-500/10' : 'bg-red-50'} border border-red-200`}>
             <div className="text-center">
-              <div className="text-3xl font-light text-red-600 mb-1">2%</div>
+              <div className="text-3xl font-light text-red-600 mb-1">
+                {healthStatusData[2]?.value || 0}%
+              </div>
               <div className={`text-sm ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>Estado Crítico</div>
               <div className="w-12 h-12 mx-auto mt-2 rounded-full bg-red-500"></div>
             </div>

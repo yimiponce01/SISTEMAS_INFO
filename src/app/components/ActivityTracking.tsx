@@ -1,76 +1,73 @@
-import { FileSpreadsheet, Calendar, Clock, Database } from 'lucide-react';
+import {
+  FileSpreadsheet,
+  Calendar,
+  Clock,
+  Database
+} from 'lucide-react';
+
+import { useEffect, useState } from 'react';
+
+import { supabase } from '../lib/supabase';
 
 interface ActivityTrackingProps {
   darkMode: boolean;
 }
 
-const mockActivities = [
-  {
-    fileName: 'EXCEL_BOVINOS_MAYO.xlsx',
-    records: 125,
-    date: '2026-05-15',
-    time: '16:06',
-    type: 'bovinos',
-  },
-  {
-    fileName: 'GALLINAS_PRODUCCION_MAYO.csv',
-    records: 84,
-    date: '2026-05-14',
-    time: '10:14',
-    type: 'gallinas',
-  },
-  {
-    fileName: 'BOVINOS_VENTAS_ABRIL.xlsx',
-    records: 43,
-    date: '2026-05-10',
-    time: '14:32',
-    type: 'bovinos',
-  },
-  {
-    fileName: 'GALLINAS_INCUBACION_MAYO.xlsx',
-    records: 156,
-    date: '2026-05-08',
-    time: '09:22',
-    type: 'gallinas',
-  },
-  {
-    fileName: 'BOVINOS_NACIMIENTOS_ABRIL.csv',
-    records: 28,
-    date: '2026-05-05',
-    time: '15:45',
-    type: 'bovinos',
-  },
-  {
-    fileName: 'GALLINAS_SALUD_MAYO.xlsx',
-    records: 92,
-    date: '2026-05-03',
-    time: '11:18',
-    type: 'gallinas',
-  },
-  {
-    fileName: 'BOVINOS_GASTOS_ABRIL.xlsx',
-    records: 67,
-    date: '2026-04-28',
-    time: '16:50',
-    type: 'bovinos',
-  },
-  {
-    fileName: 'GALLINAS_VENTAS_ABRIL.csv',
-    records: 112,
-    date: '2026-04-25',
-    time: '13:27',
-    type: 'gallinas',
-  },
-];
+
 
 export default function ActivityTracking({ darkMode }: ActivityTrackingProps) {
+
+  const [activities, setActivities] = useState<any[]>([]);
+
+  useEffect(() => {
+
+    const loadActivities = async () => {
+
+      const { data } = await supabase
+        .from('reportes_exportados')
+        .select('*')
+        .order('fecha_exportacion', {
+          ascending: false
+        });
+
+      const formattedData =
+        (data || []).map((item: any) => ({
+
+          fileName:
+            item.nombre_archivo,
+
+          records:
+            Number(item.registros || 0),
+
+          date:
+            new Date(item.fecha_exportacion)
+              .toLocaleDateString(),
+
+          time:
+            new Date(item.fecha_exportacion)
+              .toLocaleTimeString(),
+
+          type:
+            item.tipo_reporte?.includes('bovinos')
+              ? 'bovinos'
+              : 'gallinas',
+
+        }));
+
+      setActivities(formattedData);
+
+    };
+
+    loadActivities();
+
+  }, []);
+
   return (
     <div className="max-w-6xl mx-auto">
-      <div className={`rounded-xl border p-8 ${
-        darkMode
-          ? 'bg-slate-800/50 border-slate-700 backdrop-blur-sm'
-          : 'bg-white border-slate-200 shadow-sm'
-      }`}>
+      <div className={`rounded-xl border p-8 ${darkMode
+        ? 'bg-slate-800/50 border-slate-700 backdrop-blur-sm'
+        : 'bg-white border-slate-200 shadow-sm'
+        }`}>
         <div className="flex items-center justify-between mb-8">
           <div>
             <h2 className={`text-2xl font-light mb-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
@@ -80,13 +77,12 @@ export default function ActivityTracking({ darkMode }: ActivityTrackingProps) {
               Historial de archivos importados
             </p>
           </div>
-          <div className={`px-4 py-2 rounded-lg ${
-            darkMode ? 'bg-slate-700' : 'bg-slate-100'
-          }`}>
+          <div className={`px-4 py-2 rounded-lg ${darkMode ? 'bg-slate-700' : 'bg-slate-100'
+            }`}>
             <div className="flex items-center gap-2">
               <Database className={`w-5 h-5 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`} />
               <span className={`font-light ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                {mockActivities.length} importaciones
+                {activities.length} importaciones
               </span>
             </div>
           </div>
@@ -94,29 +90,26 @@ export default function ActivityTracking({ darkMode }: ActivityTrackingProps) {
 
         {/* Activity List */}
         <div className="space-y-3">
-          {mockActivities.map((activity, idx) => (
+          {activities.map((activity, idx) => (
             <div
               key={idx}
-              className={`p-5 rounded-lg border transition-all hover:shadow-md ${
-                darkMode
-                  ? 'bg-slate-700/50 border-slate-600 hover:bg-slate-700'
-                  : 'bg-slate-50 border-slate-200 hover:bg-white'
-              }`}
+              className={`p-5 rounded-lg border transition-all hover:shadow-md ${darkMode
+                ? 'bg-slate-700/50 border-slate-600 hover:bg-slate-700'
+                : 'bg-slate-50 border-slate-200 hover:bg-white'
+                }`}
             >
               <div className="flex items-center gap-6">
                 {/* Icon */}
-                <div className={`flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center ${
-                  activity.type === 'bovinos'
-                    ? darkMode
-                      ? 'bg-blue-500/20 border border-blue-500/30'
-                      : 'bg-blue-50 border border-blue-200'
-                    : darkMode
-                      ? 'bg-orange-500/20 border border-orange-500/30'
-                      : 'bg-orange-50 border border-orange-200'
-                }`}>
-                  <FileSpreadsheet className={`w-6 h-6 ${
-                    activity.type === 'bovinos' ? 'text-blue-600' : 'text-orange-600'
-                  }`} />
+                <div className={`flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center ${activity.type === 'bovinos'
+                  ? darkMode
+                    ? 'bg-blue-500/20 border border-blue-500/30'
+                    : 'bg-blue-50 border border-blue-200'
+                  : darkMode
+                    ? 'bg-orange-500/20 border border-orange-500/30'
+                    : 'bg-orange-50 border border-orange-200'
+                  }`}>
+                  <FileSpreadsheet className={`w-6 h-6 ${activity.type === 'bovinos' ? 'text-blue-600' : 'text-orange-600'
+                    }`} />
                 </div>
 
                 {/* File Info */}
@@ -125,9 +118,8 @@ export default function ActivityTracking({ darkMode }: ActivityTrackingProps) {
                     {activity.fileName}
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className={`text-sm inline-flex items-center gap-1 ${
-                      activity.type === 'bovinos' ? 'text-blue-600' : 'text-orange-600'
-                    }`}>
+                    <span className={`text-sm inline-flex items-center gap-1 ${activity.type === 'bovinos' ? 'text-blue-600' : 'text-orange-600'
+                      }`}>
                       <span className="w-2 h-2 rounded-full bg-current"></span>
                       {activity.type === 'bovinos' ? 'Bovinos' : 'Gallinas'}
                     </span>
@@ -161,7 +153,12 @@ export default function ActivityTracking({ darkMode }: ActivityTrackingProps) {
         <div className="grid grid-cols-3 gap-6 mt-8 pt-8 border-t ${darkMode ? 'border-slate-700' : 'border-slate-200'}">
           <div className="text-center">
             <div className={`text-3xl font-light mb-1 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-              {mockActivities.reduce((sum, a) => sum + a.records, 0).toLocaleString()}
+              {activities
+                .reduce(
+                  (sum, a) => sum + Number(a.records || 0),
+                  0
+                )
+                .toLocaleString()}
             </div>
             <div className={`text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
               Total de Registros
@@ -169,7 +166,9 @@ export default function ActivityTracking({ darkMode }: ActivityTrackingProps) {
           </div>
           <div className="text-center">
             <div className="text-3xl font-light text-blue-600 mb-1">
-              {mockActivities.filter(a => a.type === 'bovinos').length}
+              {activities.filter(
+                a => a.type === 'bovinos'
+              ).length}
             </div>
             <div className={`text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
               Archivos Bovinos
@@ -177,7 +176,9 @@ export default function ActivityTracking({ darkMode }: ActivityTrackingProps) {
           </div>
           <div className="text-center">
             <div className="text-3xl font-light text-orange-600 mb-1">
-              {mockActivities.filter(a => a.type === 'gallinas').length}
+              {activities.filter(
+                a => a.type === 'gallinas'
+              ).length}
             </div>
             <div className={`text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
               Archivos Gallinas

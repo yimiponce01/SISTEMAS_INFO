@@ -1,5 +1,6 @@
 import { Download, FileText, BarChart3, PieChart, FileSpreadsheet, CheckCircle } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase';
 
 interface ExportReportsProps {
   darkMode: boolean;
@@ -8,16 +9,65 @@ interface ExportReportsProps {
 export default function ExportReports({ darkMode }: ExportReportsProps) {
   const [exporting, setExporting] = useState<string | null>(null);
   const [exported, setExported] = useState<string | null>(null);
+  const [exportHistory, setExportHistory] = useState<any[]>([]);
+  useEffect(() => {
 
-  const handleExport = (type: string) => {
+    const loadExportHistory = async () => {
+
+      const { data } = await supabase
+        .from('reportes_exportados')
+        .select('*')
+        .order('fecha_exportacion', { ascending: false });
+
+      setExportHistory(data || []);
+
+    };
+
+    loadExportHistory();
+
+  }, []);
+
+  const handleExport = async (
+    type: string,
+    title: string
+  ) => {
+
     setExporting(type);
     setExported(null);
 
+    const fileName =
+      `${title.replace(/\s+/g, '_').toLowerCase()}.pdf`;
+
+    await supabase
+      .from('reportes_exportados')
+      .insert([
+        {
+          id_usuario: 1,
+          tipo_reporte: type,
+          nombre_archivo: fileName,
+          formato: 'pdf',
+          tamano: '2.5 MB',
+          estado: 'generado',
+          registros: 100,
+        }
+      ]);
+
+    const { data } = await supabase
+      .from('reportes_exportados')
+      .select('*')
+      .order('fecha_exportacion', {
+        ascending: false
+      });
+
+    setExportHistory(data || []);
+
+    setExporting(null);
+    setExported(type);
+
     setTimeout(() => {
-      setExporting(null);
-      setExported(type);
-      setTimeout(() => setExported(null), 3000);
-    }, 2000);
+      setExported(null);
+    }, 3000);
+
   };
 
   const exportOptions = [
@@ -106,11 +156,10 @@ export default function ExportReports({ darkMode }: ExportReportsProps) {
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className={`rounded-xl border p-8 mb-6 ${
-        darkMode
-          ? 'bg-slate-800/50 border-slate-700 backdrop-blur-sm'
-          : 'bg-white border-slate-200 shadow-sm'
-      }`}>
+      <div className={`rounded-xl border p-8 mb-6 ${darkMode
+        ? 'bg-slate-800/50 border-slate-700 backdrop-blur-sm'
+        : 'bg-white border-slate-200 shadow-sm'
+        }`}>
         <h2 className={`text-2xl font-light mb-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
           Exportar Reportes
         </h2>
@@ -129,11 +178,10 @@ export default function ExportReports({ darkMode }: ExportReportsProps) {
           return (
             <div
               key={option.id}
-              className={`rounded-xl border transition-all ${
-                darkMode
-                  ? 'bg-slate-800/50 border-slate-700 backdrop-blur-sm'
-                  : 'bg-white border-slate-200 shadow-sm'
-              } ${isExported ? 'ring-2 ring-green-500' : ''} hover:shadow-lg`}
+              className={`rounded-xl border transition-all ${darkMode
+                ? 'bg-slate-800/50 border-slate-700 backdrop-blur-sm'
+                : 'bg-white border-slate-200 shadow-sm'
+                } ${isExported ? 'ring-2 ring-green-500' : ''} hover:shadow-lg`}
             >
               <div className="p-6">
                 <div className="flex items-start gap-4 mb-4">
@@ -151,11 +199,15 @@ export default function ExportReports({ darkMode }: ExportReportsProps) {
                 </div>
 
                 <button
-                  onClick={() => handleExport(option.id)}
+                  onClick={() =>
+                    handleExport(
+                      option.id,
+                      option.title
+                    )
+                  }
                   disabled={isExporting}
-                  className={`w-full py-2.5 rounded-lg text-white font-light transition-all flex items-center justify-center gap-2 shadow-lg ${
-                    colors.button
-                  } ${isExporting ? 'opacity-50 cursor-not-allowed' : 'hover:-translate-y-0.5'}`}
+                  className={`w-full py-2.5 rounded-lg text-white font-light transition-all flex items-center justify-center gap-2 shadow-lg ${colors.button
+                    } ${isExporting ? 'opacity-50 cursor-not-allowed' : 'hover:-translate-y-0.5'}`}
                 >
                   {isExporting ? (
                     <>
@@ -181,43 +233,44 @@ export default function ExportReports({ darkMode }: ExportReportsProps) {
       </div>
 
       {/* Export History */}
-      <div className={`rounded-xl border p-6 mt-6 ${
-        darkMode
-          ? 'bg-slate-800/50 border-slate-700 backdrop-blur-sm'
-          : 'bg-white border-slate-200 shadow-sm'
-      }`}>
+      <div className={`rounded-xl border p-6 mt-6 ${darkMode
+        ? 'bg-slate-800/50 border-slate-700 backdrop-blur-sm'
+        : 'bg-white border-slate-200 shadow-sm'
+        }`}>
         <h3 className={`text-lg font-light mb-4 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
           Historial de Exportaciones
         </h3>
         <div className="space-y-3">
-          {[
-            { name: 'Dashboard_Completo_Mayo_2026.pdf', date: '2026-05-15', time: '14:23', size: '2.4 MB' },
-            { name: 'Resumen_Ejecutivo_Abril_2026.pdf', date: '2026-05-10', time: '09:15', size: '1.8 MB' },
-            { name: 'Datos_Bovinos_Q1_2026.xlsx', date: '2026-05-05', time: '16:42', size: '854 KB' },
-          ].map((file, idx) => (
+          {exportHistory.map((file, idx) => (
             <div
               key={idx}
-              className={`p-4 rounded-lg border transition-all ${
-                darkMode
-                  ? 'bg-slate-700/50 border-slate-600 hover:bg-slate-700'
-                  : 'bg-slate-50 border-slate-200 hover:bg-white'
-              }`}
+              className={`p-4 rounded-lg border transition-all ${darkMode
+                ? 'bg-slate-700/50 border-slate-600 hover:bg-slate-700'
+                : 'bg-slate-50 border-slate-200 hover:bg-white'
+                }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <FileText className={`w-5 h-5 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`} />
                   <div>
                     <div className={`font-light text-sm ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                      {file.name}
+                      {file.nombre_archivo}
                     </div>
                     <div className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                      {file.date} • {file.time} • {file.size}
+                      {file.fecha_exportacion
+                        ? new Date(file.fecha_exportacion).toLocaleDateString()
+                        : 'Sin fecha'}
+                      •
+                      {file.fecha_exportacion
+                        ? new Date(file.fecha_exportacion).toLocaleTimeString()
+                        : '--:--'}
+                      •
+                      {file.tamano || 'Sin tamaño'}
                     </div>
                   </div>
                 </div>
-                <button className={`p-2 rounded-lg transition-colors ${
-                  darkMode ? 'hover:bg-slate-600' : 'hover:bg-slate-200'
-                }`}>
+                <button className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-slate-600' : 'hover:bg-slate-200'
+                  }`}>
                   <Download className={`w-4 h-4 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`} />
                 </button>
               </div>
