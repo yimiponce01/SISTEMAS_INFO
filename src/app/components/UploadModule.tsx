@@ -84,7 +84,7 @@ export default function UploadModule({ darkMode }: UploadModuleProps) {
               }`}
             >
               <div className="text-center">
-                <div className="text-4xl mb-2">🐄</div>
+                {/*<div className="text-4xl mb-2">🐄</div>*/}
                 <div className={`font-light ${selectedType === 'bovinos' ? 'text-blue-600' : darkMode ? 'text-white' : 'text-slate-900'}`}>
                   Bovinos
                 </div>

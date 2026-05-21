@@ -128,7 +128,7 @@ const { data: gallinasMuertes } = await supabase
               (gallinasAnimales?.length || 0)
               ? 'bovinos'
               : 'gallinas',
-          icon: '🐄🐔',
+          //icon: '🐄🐔',
         },
 
         {
