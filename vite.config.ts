@@ -22,6 +22,7 @@ function figmaAssetResolver() {
 }
 
 export default defineConfig({
+  base: '/SISTEMAS_INFO/',
   plugins: [
     react(),
     tailwindcss(),
