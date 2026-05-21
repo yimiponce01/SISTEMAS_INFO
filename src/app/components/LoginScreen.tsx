@@ -134,7 +134,6 @@ export default function LoginScreen({ onLogin, onNavigateToRegister, onNavigateT
 
           {/* Footer */}
           <div className="mt-6 text-center text-xs text-slate-500 font-light">
-            v1.0.0 - Premium Edition
           </div>
         </div>
       </div>

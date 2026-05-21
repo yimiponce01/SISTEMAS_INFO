@@ -46,7 +46,7 @@ export default function App() {
     from: firstDay.toISOString().split('T')[0],
     to: today.toISOString().split('T')[0]
   });
-  
+
   // Authentication handlers
   const handleLogin = async (
     email: string,
@@ -56,7 +56,7 @@ export default function App() {
 
     const { data, error } =
       await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim().toLowerCase(),
         password,
       });
 
@@ -70,14 +70,35 @@ export default function App() {
 
     const user = data.user;
 
+    const emailLimpio = (user.email || '')
+      .trim()
+      .toLowerCase();
+
+    console.log('EMAIL AUTH:', emailLimpio);
+
+    const { data: usuariosDB, error: usuarioError } = await supabase
+      .from('usuarios')
+      .select('*');
+
+    console.log('USUARIOS TABLA:', usuariosDB);
+    console.log('ERROR TABLA:', usuarioError);
+
+    const usuarioDB = usuariosDB?.find(
+      u => u.email.trim().toLowerCase() === emailLimpio
+    );
+
+    console.log('USUARIO ENCONTRADO:', usuarioDB);
+
+    if (usuarioError || !usuarioDB) {
+      setToastMessage('No se encontró el usuario en la base de datos');
+      setShowToast(true);
+      return;
+    }
+
     setCurrentUser({
-      name:
-        user.user_metadata?.name ||
-        'Usuario',
-      email: user.email,
-      role:
-        user.user_metadata?.role ||
-        'operador',
+      name: usuarioDB.nombre,
+      email: usuarioDB.email,
+      role: usuarioDB.rol.toLowerCase(),
     });
 
     setIsAuthenticated(true);
@@ -126,6 +147,7 @@ export default function App() {
     setShowToast(true);
 
   };
+  
   const handleForgotPassword = async (
     email: string
   ) => {
@@ -182,16 +204,37 @@ export default function App() {
 
       if (session?.user) {
 
+        console.log('SESSION EMAIL:', session.user.email);
+
+
+        const emailLimpio = (session.user.email || '')
+          .trim()
+          .toLowerCase();
+
+        console.log('EMAIL AUTH:', emailLimpio);
+
+        const { data: usuariosDB, error: usuarioError } = await supabase
+          .from('usuarios')
+          .select('*');
+
+        console.log('USUARIOS TABLA:', usuariosDB);
+        console.log('ERROR TABLA:', usuarioError);
+
+        const usuarioDB = usuariosDB?.find(
+          u => u.email.trim().toLowerCase() === emailLimpio
+        );
+
+        console.log('USUARIO ENCONTRADO:', usuarioDB);
+
+        if (usuarioError || !usuarioDB) {
+          console.error('Usuario no encontrado en tabla usuarios');
+          return;
+        }
+
         setCurrentUser({
-          name:
-            session.user.user_metadata?.name ||
-            'Usuario',
-
-          email: session.user.email,
-
-          role:
-            session.user.user_metadata?.role ||
-            'operador',
+          name: usuarioDB.nombre,
+          email: usuarioDB.email,
+          role: usuarioDB.rol.toLowerCase(),
         });
 
         setIsAuthenticated(true);

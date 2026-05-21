@@ -90,7 +90,7 @@ export default function UploadModule({ darkMode }: UploadModuleProps) {
                 </div>
               </div>
             </button>
-            <button
+            {/*<button
               onClick={() => {
                 setSelectedType('gallinas');
                 setUploadComplete(false);
@@ -109,7 +109,7 @@ export default function UploadModule({ darkMode }: UploadModuleProps) {
                   Gallinas
                 </div>
               </div>
-            </button>
+            </button>*/}
           </div>
         </div>
 
