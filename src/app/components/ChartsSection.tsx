@@ -629,7 +629,15 @@ export default function ChartsSection({
             <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#374151' : '#E5E7EB'} />
             <XAxis dataKey="month" stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
             <YAxis stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
-            <Tooltip contentStyle={tooltipStyle} />
+            <Tooltip
+              contentStyle={tooltipStyle}
+              formatter={(value: any) =>
+                Number(value).toLocaleString('es-PE', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                })
+              }
+            />
             <Legend wrapperStyle={{ fontSize: '12px' }} />
             <Bar dataKey="produccion" fill={primaryColor} radius={[6, 6, 0, 0]} />
           </BarChart>
@@ -644,7 +652,12 @@ export default function ChartsSection({
             <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#374151' : '#E5E7EB'} />
             <XAxis dataKey="month" stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
             <YAxis stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
-            <Tooltip contentStyle={tooltipStyle} />
+            <Tooltip
+              contentStyle={tooltipStyle}
+              formatter={(value: any) =>
+                Number(value).toFixed(2)
+              }
+            />
             <Legend wrapperStyle={{ fontSize: '12px' }} />
             <Line type="monotone" dataKey="ganancias" stroke="#22C55E" strokeWidth={2} dot={{ fill: '#22C55E', r: 3 }} />
             <Line type="monotone" dataKey="gastos" stroke="#EF4444" strokeWidth={2} dot={{ fill: '#EF4444', r: 3 }} />
@@ -663,7 +676,12 @@ export default function ChartsSection({
             <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#374151' : '#E5E7EB'} />
             <XAxis dataKey="month" stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
             <YAxis stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
-            <Tooltip contentStyle={tooltipStyle} />
+            <Tooltip
+              contentStyle={tooltipStyle}
+              formatter={(value: any) =>
+                Number(value).toFixed(2)
+              }
+            />
             <Legend wrapperStyle={{ fontSize: '12px' }} />
             <Area type="monotone" dataKey="nacimientos" stackId="1" stroke="#22C55E" fill="#22C55E" fillOpacity={0.6} />
             <Area type="monotone" dataKey="muertes" stackId="2" stroke="#EF4444" fill="#EF4444" fillOpacity={0.6} />
@@ -690,7 +708,12 @@ export default function ChartsSection({
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>
-            <Tooltip contentStyle={tooltipStyle} />
+            <Tooltip
+              contentStyle={tooltipStyle}
+              formatter={(value: any) =>
+                Number(value).toFixed(2)
+              }
+            />
           </PieChart>
         </ResponsiveContainer>
       </div>
@@ -721,7 +744,16 @@ export default function ChartsSection({
             <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#374151' : '#E5E7EB'} />
             <XAxis dataKey="month" stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
             <YAxis stroke={darkMode ? '#9CA3AF' : '#6B7280'} style={{ fontSize: '12px' }} />
-            <Tooltip contentStyle={tooltipStyle} />
+            <Tooltip
+              contentStyle={tooltipStyle}
+              formatter={(value: any) =>
+                Number(value).toLocaleString('es-PE', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                })
+              }
+            />
+
             <Legend wrapperStyle={{ fontSize: '12px' }} />
             <Bar dataKey="ingresos" fill="#22C55E" radius={[6, 6, 0, 0]} />
             <Line type="monotone" dataKey="egresos" stroke="#EF4444" strokeWidth={2} />
