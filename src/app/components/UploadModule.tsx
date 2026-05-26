@@ -1,60 +1,58 @@
 import { useState } from 'react';
-import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, Loader } from 'lucide-react';
+import { AlertCircle, CheckCircle, FileSpreadsheet, Loader, Upload } from 'lucide-react';
 
 interface UploadModuleProps {
   darkMode: boolean;
 }
 
+type UploadType = 'bovinos' | 'gallinas' | 'ambos';
+
 export default function UploadModule({ darkMode }: UploadModuleProps) {
-  const [selectedType, setSelectedType] = useState<'bovinos' | 'gallinas' | null>(null);
+  const [selectedType, setSelectedType] = useState<UploadType | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadComplete, setUploadComplete] = useState(false);
-  const [uploadedRecords, setUploadedRecords] = useState(0);
   const [dragActive, setDragActive] = useState(false);
 
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true);
-    } else if (e.type === 'dragleave') {
-      setDragActive(false);
-    }
+  const handleDrag = (event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setDragActive(event.type === 'dragenter' || event.type === 'dragover');
   };
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleDrop = (event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
     setDragActive(false);
 
-    if (selectedType && e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleUpload(e.dataTransfer.files[0]);
+    if (selectedType && event.dataTransfer.files?.[0]) {
+      handleUpload(event.dataTransfer.files[0]);
     }
   };
 
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (selectedType && e.target.files && e.target.files[0]) {
-      handleUpload(e.target.files[0]);
+  const handleFileInput = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (selectedType && event.target.files?.[0]) {
+      handleUpload(event.target.files[0]);
     }
   };
 
   const handleUpload = (file: File) => {
+    void file;
     setUploading(true);
     setUploadComplete(false);
 
-    // Simulate upload process
     setTimeout(() => {
       setUploading(false);
       setUploadComplete(true);
-      setUploadedRecords(Math.floor(Math.random() * 200) + 50);
     }, 2000);
   };
 
+  const typeAccent = selectedType === 'bovinos' ? 'text-sky-300' : selectedType === 'gallinas' ? 'text-orange-300' : 'text-fuchsia-300';
+
   return (
     <div className="max-w-4xl mx-auto">
-      <div className={`rounded-xl border p-8 ${
+      <div className={`rounded-xl border p-6 sm:p-8 ${
         darkMode
-          ? 'bg-slate-800/50 border-slate-700 backdrop-blur-sm'
+          ? 'bg-slate-900/70 border-cyan-300/10 backdrop-blur-xl shadow-2xl shadow-cyan-950/30'
           : 'bg-white border-slate-200 shadow-sm'
       }`}>
         <h2 className={`text-2xl font-light mb-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
@@ -64,69 +62,46 @@ export default function UploadModule({ darkMode }: UploadModuleProps) {
           Importa datos desde archivos Excel o CSV
         </p>
 
-        {/* Type Selection */}
         <div className="mb-8">
           <label className={`block text-sm font-light mb-3 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-            Selecciona el tipo de ganado
+            Selecciona el tipo de importación
           </label>
-          <div className="grid grid-cols-2 gap-4">
-            <button
-              onClick={() => {
-                setSelectedType('bovinos');
-                setUploadComplete(false);
-              }}
-              className={`p-6 rounded-xl border-2 transition-all ${
-                selectedType === 'bovinos'
-                  ? 'border-blue-500 bg-blue-500/10'
-                  : darkMode
-                    ? 'border-slate-700 bg-slate-700/30 hover:border-slate-600'
-                    : 'border-slate-200 bg-slate-50 hover:border-slate-300'
-              }`}
-            >
-              <div className="text-center">
-                {/*<div className="text-4xl mb-2">🐄</div>*/}
-                <div className={`font-light ${selectedType === 'bovinos' ? 'text-blue-600' : darkMode ? 'text-white' : 'text-slate-900'}`}>
-                  Bovinos
-                </div>
-              </div>
-            </button>
-            {/*<button
-              onClick={() => {
-                setSelectedType('gallinas');
-                setUploadComplete(false);
-              }}
-              className={`p-6 rounded-xl border-2 transition-all ${
-                selectedType === 'gallinas'
-                  ? 'border-orange-500 bg-orange-500/10'
-                  : darkMode
-                    ? 'border-slate-700 bg-slate-700/30 hover:border-slate-600'
-                    : 'border-slate-200 bg-slate-50 hover:border-slate-300'
-              }`}
-            >
-              <div className="text-center">
-                <div className="text-4xl mb-2">🐔</div>
-                <div className={`font-light ${selectedType === 'gallinas' ? 'text-orange-600' : darkMode ? 'text-white' : 'text-slate-900'}`}>
-                  Gallinas
-                </div>
-              </div>
-            </button>*/}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {(['bovinos', 'gallinas', 'ambos'] as const).map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => {
+                  setSelectedType(type);
+                  setUploadComplete(false);
+                }}
+                className={`rounded-xl border-2 p-6 transition-all duration-300 hover:-translate-y-1 ${
+                  selectedType === type
+                    ? 'border-cyan-300 bg-cyan-400/10 shadow-lg shadow-cyan-400/20'
+                    : darkMode
+                      ? 'border-slate-700 bg-slate-950/40 hover:border-cyan-300/40'
+                      : 'border-slate-200 bg-slate-50 hover:border-slate-300'
+                }`}
+              >
+                <span className={`font-light capitalize ${selectedType === type ? 'text-cyan-200' : darkMode ? 'text-white' : 'text-slate-900'}`}>
+                  {type}
+                </span>
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Upload Area */}
         {selectedType && (
           <div
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
             onDrop={handleDrop}
-            className={`relative border-2 border-dashed rounded-xl p-12 transition-all ${
+            className={`relative rounded-xl border-2 border-dashed p-8 transition-all sm:p-12 ${
               dragActive
-                ? selectedType === 'bovinos'
-                  ? 'border-blue-500 bg-blue-500/10'
-                  : 'border-orange-500 bg-orange-500/10'
+                ? 'border-cyan-300 bg-cyan-400/10'
                 : darkMode
-                  ? 'border-slate-600 bg-slate-700/30'
+                  ? 'border-slate-600 bg-slate-950/35'
                   : 'border-slate-300 bg-slate-50'
             }`}
           >
@@ -141,9 +116,7 @@ export default function UploadModule({ darkMode }: UploadModuleProps) {
             {!uploading && !uploadComplete && (
               <label htmlFor="file-upload" className="cursor-pointer">
                 <div className="text-center">
-                  <Upload className={`w-16 h-16 mx-auto mb-4 ${
-                    selectedType === 'bovinos' ? 'text-blue-600' : 'text-orange-600'
-                  }`} />
+                  <Upload className={`w-16 h-16 mx-auto mb-4 ${typeAccent}`} />
                   <div className={`text-lg font-light mb-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                     Arrastra el archivo aquí o haz clic para seleccionar
                   </div>
@@ -156,9 +129,7 @@ export default function UploadModule({ darkMode }: UploadModuleProps) {
 
             {uploading && (
               <div className="text-center">
-                <Loader className={`w-16 h-16 mx-auto mb-4 animate-spin ${
-                  selectedType === 'bovinos' ? 'text-blue-600' : 'text-orange-600'
-                }`} />
+                <Loader className={`w-16 h-16 mx-auto mb-4 animate-spin ${typeAccent}`} />
                 <div className={`text-lg font-light mb-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                   Subiendo archivo...
                 </div>
@@ -170,20 +141,17 @@ export default function UploadModule({ darkMode }: UploadModuleProps) {
 
             {uploadComplete && (
               <div className="text-center">
-                <CheckCircle className="w-16 h-16 mx-auto mb-4 text-green-600" />
+                <CheckCircle className="w-16 h-16 mx-auto mb-4 text-green-400" />
                 <div className={`text-lg font-light mb-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                  ¡Datos añadidos correctamente!
+                  Archivo recibido correctamente
                 </div>
-                <div className={`text-2xl font-light text-green-600 mb-4`}>
-                  {uploadedRecords} registros importados
+                <div className="mb-4 text-sm font-light text-slate-400">
+                  Sin conteo de registros hasta completar la importación real en Supabase
                 </div>
                 <button
+                  type="button"
                   onClick={() => setUploadComplete(false)}
-                  className={`px-6 py-2.5 rounded-lg font-light transition-all ${
-                    selectedType === 'bovinos'
-                      ? 'bg-blue-500 text-white hover:bg-blue-600'
-                      : 'bg-orange-500 text-white hover:bg-orange-600'
-                  }`}
+                  className="rounded-lg bg-gradient-to-r from-blue-500 to-violet-600 px-6 py-2.5 font-light text-white shadow-lg shadow-blue-500/25 transition-all hover:-translate-y-0.5"
                 >
                   Subir otro archivo
                 </button>
@@ -192,27 +160,22 @@ export default function UploadModule({ darkMode }: UploadModuleProps) {
           </div>
         )}
 
-        {/* Supported Formats */}
-        <div className={`mt-8 p-6 rounded-lg border ${
+        <div className={`mt-8 rounded-lg border p-6 ${
           darkMode
-            ? 'bg-slate-700/30 border-slate-600'
+            ? 'bg-slate-950/40 border-slate-700'
             : 'bg-slate-50 border-slate-200'
         }`}>
           <div className="flex items-start gap-4">
-            <FileSpreadsheet className={`w-6 h-6 flex-shrink-0 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`} />
+            <FileSpreadsheet className={`w-6 h-6 flex-shrink-0 ${darkMode ? 'text-cyan-300' : 'text-slate-600'}`} />
             <div className="flex-1">
               <div className={`font-light mb-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                 Formatos de archivo soportados
               </div>
               <div className={`text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>Microsoft Excel (.xlsx, .xls)</li>
-                  <li>Valores separados por comas (.csv)</li>
-                  <li>Tamaño máximo: 10 MB</li>
-                  <li>Los datos deben incluir columnas: ID, Fecha, Categoría, Valores</li>
-                </ul>
+                Excel, CSV, hasta 10 MB. La opción Ambos procesa registros mixtos de bovinos y gallinas.
               </div>
             </div>
+            <AlertCircle className="h-5 w-5 text-amber-300" />
           </div>
         </div>
       </div>

@@ -36,28 +36,38 @@ export default function Header({
   };
 
   return (
-    <header className={`fixed top-0 left-0 right-0 z-50 ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'} border-b h-16 transition-colors`}>
-      <div className="h-full px-6 flex items-center justify-between">
+    <header
+      className={`fixed top-0 left-0 right-0 z-50 ${darkMode ? 'bg-[#061326]/88 border-cyan-300/30' : 'bg-white/95 border-slate-200'} border-b h-16 transition-colors backdrop-blur-xl`}
+      style={
+        darkMode
+          ? {
+              boxShadow:
+                '0 0 0 1px rgba(0,191,255,0.12), 0 0 28px rgba(0,191,255,0.18), 0 16px 48px rgba(2,6,23,0.45), inset 0 -1px 18px rgba(34,211,238,0.08)',
+            }
+          : undefined
+      }
+    >
+      <div className="h-full px-4 sm:px-6 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-slate-800' : 'hover:bg-slate-100'}`}
+            className={`p-2 rounded-xl transition-all duration-300 ${darkMode ? 'border border-cyan-300/25 bg-cyan-300/5 shadow-lg shadow-cyan-400/10 hover:border-cyan-300/70 hover:bg-cyan-300/10 hover:shadow-cyan-400/30' : 'hover:bg-slate-100'}`}
           >
             <Menu className={`w-5 h-5 ${darkMode ? 'text-white' : 'text-slate-900'}`} />
           </button>
-          <h1 className={`text-lg font-light ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-            Dashboard
+          <h1 className={`hidden text-lg font-light tracking-[0.18em] sm:block ${darkMode ? 'text-white drop-shadow-[0_0_12px_rgba(34,211,238,0.75)]' : 'text-slate-900'}`}>
+            PONCEAGROSISTEM
           </h1>
         </div>
 
-        <div className={`flex-1 text-center text-xl font-light ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+        <div className={`flex-1 truncate px-3 text-center text-base font-light tracking-[0.16em] sm:text-xl ${darkMode ? 'text-white drop-shadow-[0_0_14px_rgba(0,191,255,0.78)]' : 'text-slate-900'}`}>
           {pageTitle}
         </div>
 
         <div className="flex items-center gap-4">
           <button
             onClick={() => setDarkMode(!darkMode)}
-            className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-slate-800' : 'hover:bg-slate-100'}`}
+            className={`p-2 rounded-xl transition-all duration-300 ${darkMode ? 'border border-amber-300/30 bg-amber-300/10 shadow-lg shadow-amber-400/10 hover:border-amber-300/70 hover:shadow-amber-400/30' : 'hover:bg-slate-100'}`}
           >
             {darkMode ? (
               <Sun className="w-5 h-5 text-amber-400" />

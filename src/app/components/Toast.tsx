@@ -1,15 +1,43 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle, X } from 'lucide-react';
+import { AlertCircle, CheckCircle, Info, X } from 'lucide-react';
+
+export type ToastType = 'success' | 'error' | 'info';
 
 interface ToastProps {
   message: string;
   show: boolean;
   onClose: () => void;
   duration?: number;
+  type?: ToastType;
 }
 
-export default function Toast({ message, show, onClose, duration = 3000 }: ToastProps) {
+const toastStyles = {
+  success: {
+    Icon: CheckCircle,
+    frame: 'border-emerald-300/30 shadow-emerald-500/20',
+    icon: 'from-emerald-400 to-cyan-400 shadow-emerald-400/30',
+  },
+  error: {
+    Icon: AlertCircle,
+    frame: 'border-rose-300/35 shadow-rose-500/20',
+    icon: 'from-rose-500 to-orange-400 shadow-rose-400/30',
+  },
+  info: {
+    Icon: Info,
+    frame: 'border-cyan-300/30 shadow-cyan-500/20',
+    icon: 'from-cyan-400 to-violet-500 shadow-cyan-400/30',
+  },
+};
+
+export default function Toast({
+  message,
+  show,
+  onClose,
+  duration = 3600,
+  type = 'success',
+}: ToastProps) {
   const [isVisible, setIsVisible] = useState(false);
+  const { Icon, frame, icon } = toastStyles[type];
 
   useEffect(() => {
     if (show) {
@@ -26,27 +54,26 @@ export default function Toast({ message, show, onClose, duration = 3000 }: Toast
   if (!show) return null;
 
   return (
-    <div className="fixed top-20 right-6 z-[100] pointer-events-none">
+    <div className="fixed right-4 top-20 z-[100] pointer-events-none sm:right-6">
       <div
         className={`pointer-events-auto transition-all duration-300 ${
           isVisible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
         }`}
       >
-        <div className="bg-white/95 backdrop-blur-xl rounded-xl shadow-2xl border border-slate-200 p-4 flex items-center gap-3 min-w-[300px]">
-          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-            <CheckCircle className="w-5 h-5 text-white" />
+        <div className={`flex min-w-[280px] max-w-[calc(100vw-2rem)] items-center gap-3 rounded-xl border bg-slate-950/90 p-4 text-white shadow-2xl backdrop-blur-2xl ${frame}`}>
+          <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br shadow-lg ${icon}`}>
+            <Icon className="h-5 w-5 text-white" />
           </div>
-          <div className="flex-1">
-            <p className="text-sm font-light text-slate-900">{message}</p>
-          </div>
+          <p className="flex-1 text-sm font-light text-slate-100">{message}</p>
           <button
+            type="button"
             onClick={() => {
               setIsVisible(false);
               setTimeout(onClose, 300);
             }}
-            className="flex-shrink-0 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+            className="flex-shrink-0 rounded-lg p-1 text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
           >
-            <X className="w-4 h-4 text-slate-600" />
+            <X className="h-4 w-4" />
           </button>
         </div>
       </div>

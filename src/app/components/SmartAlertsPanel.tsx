@@ -3,178 +3,107 @@ import {
   TrendingUp,
   Lightbulb,
   AlertTriangle,
-  CheckCircle,
-  Info
+  Info,
 } from 'lucide-react';
-
-import { useEffect, useState } from 'react';
-
-import { supabase } from '../lib/supabase';
+import type { DashboardData } from '../lib/dashboardData';
 
 interface SmartAlertsPanelProps {
   selectedLivestock: 'bovinos' | 'gallinas' | 'both';
   darkMode: boolean;
   fullScreen?: boolean;
+  dashboardData?: DashboardData | null;
 }
 
-export default function SmartAlertsPanel({ selectedLivestock, darkMode, fullScreen }: SmartAlertsPanelProps) {
-  const [alerts, setAlerts] = useState<any[]>([]);
+export default function SmartAlertsPanel({
+  selectedLivestock,
+  darkMode,
+  fullScreen,
+  dashboardData,
+}: SmartAlertsPanelProps) {
+  const totals = dashboardData?.totals;
 
-  useEffect(() => {
+  const alerts: any[] = [];
 
-    const loadAlerts = async () => {
+  if (!dashboardData) {
+    alerts.push({
+      type: 'info',
+      icon: Info,
+      title: 'Sin datos disponibles',
+      message: 'No hay datos disponibles para generar alertas',
+      timestamp: 'Ahora',
+      color: 'blue',
+    });
+  } else {
+    if ((totals?.muertes || 0) > 0) {
+      alerts.push({
+        type: 'critical',
+        icon: AlertCircle,
+        title: 'Muertes Registradas',
+        message: `Se registraron ${totals?.muertes || 0} muertes en el sistema`,
+        timestamp: 'Ahora',
+        color: 'red',
+      });
+    }
 
-      const tipoId =
-        selectedLivestock === 'bovinos'
-          ? 1
-          : selectedLivestock === 'gallinas'
-            ? 2
-            : null;
+    if ((totals?.enfermedades || 0) > 0) {
+      alerts.push({
+        type: 'warning',
+        icon: AlertTriangle,
+        title: 'Enfermedades Detectadas',
+        message: `Hay ${totals?.enfermedades || 0} registros de enfermedades`,
+        timestamp: 'Ahora',
+        color: 'amber',
+      });
+    }
 
-      // ===== CARGAR TABLAS =====
+    if ((totals?.produccion || 0) > 0) {
+      alerts.push({
+        type: 'success',
+        icon: TrendingUp,
+        title: 'Producción Registrada',
+        message: `La producción total actual es ${Number(totals?.produccion || 0).toFixed(2)}`,
+        timestamp: 'Ahora',
+        color: 'green',
+      });
+    }
 
-const { data: animales } = await supabase
-  .from('animales')
-  .select('*')
-  .in('id_tipo', tipoId ? [tipoId] : [1, 2]);
+    alerts.push({
+      type: 'info',
+      icon: Info,
+      title: 'Balance General',
+      message: `Ganancia total actual: $${Number(totals?.ganancias || 0).toFixed(2)}`,
+      timestamp: 'Ahora',
+      color: (totals?.ganancias || 0) >= 0 ? 'green' : 'red',
+    });
 
-const { data: produccion } = await supabase
-  .from('produccion')
-  .select('*')
-  .in('id_tipo_animal', tipoId ? [tipoId] : [1, 2]);
+    if ((totals?.animales || 0) > 0) {
+      alerts.push({
+        type: 'recommendation',
+        icon: Lightbulb,
+        title: 'Sistema Activo',
+        message: `Hay ${totals?.animales || 0} animales registrados en el filtro actual`,
+        timestamp: 'Ahora',
+        color: 'blue',
+      });
+    }
 
-const { data: muertes } = await supabase
-  .from('muertes')
-  .select('*')
-  .in('id_tipo_animal', tipoId ? [tipoId] : [1, 2]);
+    if (alerts.length === 1 && (totals?.ganancias || 0) === 0) {
+      alerts.push({
+        type: 'info',
+        icon: Info,
+        title: 'Sin registros',
+        message: 'No hay registros productivos o financieros en el rango seleccionado',
+        timestamp: 'Ahora',
+        color: 'blue',
+      });
+    }
+  }
 
-const { data: enfermedades } = await supabase
-  .from('enfermedades')
-  .select('*')
-  .in('id_tipo_animal', tipoId ? [tipoId] : [1, 2]);
-
-const { data: ingresos } = await supabase
-  .from('ingresos')
-  .select('*')
-  .in('id_tipo_animal', tipoId ? [tipoId] : [1, 2]);
-
-const { data: gastos } = await supabase
-  .from('gastos')
-  .select('*')
-  .in('id_tipo_animal', tipoId ? [tipoId] : [1, 2]);
-
-const generatedAlerts: any[] = [];
-
-// ===== MUERTES =====
-
-if ((muertes?.length || 0) > 0) {
-
-  generatedAlerts.push({
-    type: 'critical',
-    icon: AlertCircle,
-    title: 'Muertes Registradas',
-    message: `Se registraron ${muertes?.length || 0} muertes en el sistema`,
-    timestamp: 'Ahora',
-    color: 'red',
-    livestock: selectedLivestock,
+  console.log('[SmartAlertsPanel] values', {
+    selectedLivestock,
+    totals,
+    alerts: alerts.map((alert) => alert.message),
   });
-
-}
-
-// ===== ENFERMEDADES =====
-
-if ((enfermedades?.length || 0) > 0) {
-
-  generatedAlerts.push({
-    type: 'warning',
-    icon: AlertTriangle,
-    title: 'Enfermedades Detectadas',
-    message: `Hay ${enfermedades?.length || 0} registros de enfermedades`,
-    timestamp: 'Ahora',
-    color: 'amber',
-    livestock: selectedLivestock,
-  });
-
-}
-
-// ===== PRODUCCION =====
-
-const totalProduccion =
-  produccion?.reduce(
-    (acc: number, item: any) =>
-      acc + Number(item.produccion || 0),
-    0
-  ) || 0;
-
-if (totalProduccion > 0) {
-
-  generatedAlerts.push({
-    type: 'success',
-    icon: TrendingUp,
-    title: 'Producción Registrada',
-    message: `La producción total actual es ${totalProduccion}`,
-    timestamp: 'Ahora',
-    color: 'green',
-    livestock: selectedLivestock,
-  });
-
-}
-
-// ===== GANANCIAS =====
-
-const totalIngresos =
-  ingresos?.reduce(
-    (acc: number, item: any) =>
-      acc + Number(item.monto || 0),
-    0
-  ) || 0;
-
-const totalGastos =
-  gastos?.reduce(
-    (acc: number, item: any) =>
-      acc + Number(item.monto || 0),
-    0
-  ) || 0;
-
-const ganancias = totalIngresos - totalGastos;
-
-generatedAlerts.push({
-  type: 'info',
-  icon: Info,
-  title: 'Balance General',
-  message: `Ganancia total actual: $${ganancias.toLocaleString()}`,
-  timestamp: 'Ahora',
-  color: ganancias >= 0 ? 'green' : 'red',
-  livestock: selectedLivestock,
-});
-
-// ===== RECOMENDACION =====
-
-if ((animales?.length || 0) > 0) {
-
-  generatedAlerts.push({
-    type: 'recommendation',
-    icon: Lightbulb,
-    title: 'Sistema Activo',
-    message: 'Continúa registrando producción y eventos diariamente',
-    timestamp: 'Ahora',
-    color: 'blue',
-    livestock: selectedLivestock,
-  });
-
-}
-
-      setAlerts(generatedAlerts);
-
-    };
-
-    loadAlerts();
-
-  }, [selectedLivestock]);
-
-  const filteredAlerts = alerts.filter(alert =>
-    selectedLivestock === 'both' || alert.livestock === selectedLivestock || alert.livestock === 'both'
-  );
 
   const colorClasses: Record<string, { bg: string; border: string; icon: string; text: string }> = {
     red: {
@@ -220,17 +149,17 @@ if ((animales?.length || 0) > 0) {
             Alertas Inteligentes
           </h3>
           <p className={`text-xs mt-1 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-            Recomendaciones y predicciones AI
+            Alertas calculadas desde Supabase
           </p>
         </div>
 
         <div className="max-h-[calc(100vh-250px)] overflow-y-auto custom-scrollbar">
-          {filteredAlerts.map((alert, idx) => {
+          {alerts.map((alert, idx) => {
             const Icon = alert.icon;
             const colors = colorClasses[alert.color];
             return (
               <div
-                key={idx}
+                key={`${alert.title}-${idx}`}
                 className={`p-4 border-b transition-all hover:bg-opacity-70 hover:scale-[1.02] cursor-pointer ${darkMode ? 'border-slate-700' : 'border-slate-100'
                   } ${colors.bg} last:border-b-0`}
               >

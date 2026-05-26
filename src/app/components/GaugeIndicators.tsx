@@ -1,9 +1,8 @@
 import { useState, type MouseEvent } from 'react';
-import { useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import type { DashboardData } from '../lib/dashboardData';
 
 interface GaugeIndicatorsProps {
-  selectedLivestock: 'bovinos' | 'gallinas' | 'both';
+  dashboardData: DashboardData | null;
   darkMode: boolean;
 }
 
@@ -44,170 +43,32 @@ function describeArc(startAngle: number, endAngle: number) {
   ].join(' ');
 }
 
-export default function GaugeIndicators({
-  selectedLivestock,
-  darkMode
-}: GaugeIndicatorsProps) {
-  const [metrics, setMetrics] = useState({
-    revenue: 0,
-    expenses: 0,
-    production: 0,
-    total: 0,
-    deaths: 0,
-    diseases: 0,
-  });
-
-  useEffect(() => {
-
-    const loadMetrics = async () => {
-
-      let tipo = null;
-
-      if (selectedLivestock === 'bovinos') {
-        tipo = 2;
-      }
-
-      if (selectedLivestock === 'gallinas') {
-        tipo = 1;
-      }
-
-      const { data: animales = [] } =
-        await supabase
-          .from('animales')
-          .select('*')
-          .eq('id_tipo', tipo);
-
-      const animalIds =
-        (animales || []).map((a: any) => a.id_animal);
-
-      // ===== INGRESOS =====
-
-      let ingresosQuery =
-        supabase
-          .from('ingresos')
-          .select('*');
-
-      ingresosQuery =
-        ingresosQuery.in('id_animal', animalIds);
-
-      const { data: ingresos } =
-        await ingresosQuery;
-
-      // ===== GASTOS =====
-
-      let gastosQuery =
-        supabase
-          .from('gastos')
-          .select('*');
-
-      if (tipo) {
-        gastosQuery =
-          gastosQuery.eq('id_tipo_animal', tipo);
-      }
-
-      const { data: gastos } =
-        await gastosQuery;
-
-      // ===== PRODUCCION =====
-
-      let produccionQuery =
-        supabase
-          .from('produccion')
-          .select('*');
-
-      produccionQuery =
-        produccionQuery.in('id_animal', animalIds);
-
-      const { data: produccion } =
-        await produccionQuery;
-
-
-      // ===== MUERTES =====
-
-      let muertesQuery =
-        supabase
-          .from('muertes')
-          .select('*');
-
-      muertesQuery =
-        muertesQuery.in('id_animal', animalIds);
-
-      const { data: muertes } =
-        await muertesQuery;
-
-      // ===== ENFERMEDADES =====
-
-      let enfermedadesQuery =
-        supabase
-          .from('enfermedades')
-          .select('*');
-
-      enfermedadesQuery =
-        enfermedadesQuery.in('id_animal', animalIds);
-
-      const { data: enfermedades } =
-        await enfermedadesQuery;
-
-      // ===== CALCULOS =====
-
-      const revenue =
-        ingresos?.reduce(
-          (acc: number, item: any) =>
-            acc + Number(item.monto || 0),
-          0
-        ) || 0;
-
-      const expenses =
-        gastos?.reduce(
-          (acc: number, item: any) =>
-            acc + Number(item.monto || 0),
-          0
-        ) || 0;
-
-      const production =
-        produccion?.reduce(
-          (acc: number, item: any) =>
-            acc + Number(item.cantidad || 0),
-          0
-        ) || 0;
-
-      setMetrics({
-        revenue,
-        expenses,
-        production,
-        total: animales?.length || 0,
-        deaths: muertes?.length || 0,
-        diseases: enfermedades?.length || 0,
-      });
-
-    };
-
-    loadMetrics();
-
-  }, [selectedLivestock]);
-
+export default function GaugeIndicators({ dashboardData, darkMode }: GaugeIndicatorsProps) {
   const [tooltip, setTooltip] = useState<{
     x: number;
     y: number;
     segment: GaugeSegment;
   } | null>(null);
 
-
-  const profit = Math.max(metrics.revenue - metrics.expenses, 0);
-  const maxBase = Math.max(metrics.revenue, metrics.production, metrics.total, 1);
-  const mortalityRate = Math.round((metrics.deaths / Math.max(metrics.total, 1)) * 100);
-  const expenseRate = Math.round((metrics.expenses / Math.max(metrics.revenue, 1)) * 100);
-  const productionRate = Math.round((metrics.production / maxBase) * 100);
-  const profitRate = Math.round((profit / Math.max(metrics.revenue, 1)) * 100);
-  const healthRate = Math.max(0, 100 - mortalityRate - metrics.diseases);
+  const totals = dashboardData?.totals;
+  const mortalityRate = totals?.animales ? Math.round((totals.muertes / totals.animales) * 100) : 0;
+  const expenseRate = totals?.ingresos ? Math.round((totals.gastos / totals.ingresos) * 100) : 0;
+  const productionRate = totals?.produccion ? 100 : 0;
+  const profitRate = totals?.ingresos ? Math.round((totals.ganancias / totals.ingresos) * 100) : 0;
+  const healthRate = Math.round(dashboardData?.healthGauge.green || 0);
 
   const indicatorSegments: Segment[] = [
     { label: 'Mortalidad', value: mortalityRate || 1 },
     { label: 'Gastos', value: expenseRate || 1 },
-    { label: 'Rendimiento', value: profitRate || 1 },
+    { label: 'Rendimiento', value: Math.max(profitRate, 1) },
     { label: 'Producción', value: productionRate || 1 },
     { label: 'Salud', value: healthRate || 1 },
   ];
+
+  console.log('[GaugeIndicators] values', {
+    totals,
+    indicatorSegments,
+  });
 
   const sortedSegments = [...indicatorSegments].sort((a, b) => a.value - b.value);
   const total = sortedSegments.reduce((acc, segment) => acc + segment.value, 0);
@@ -255,8 +116,8 @@ export default function GaugeIndicators({
 
   return (
     <div
-      className={`rounded-xl border p-4 transition-all ${darkMode
-        ? 'bg-slate-800/50 border-slate-700 backdrop-blur-sm'
+      className={`rounded-2xl border p-5 transition-all duration-300 hover:-translate-y-1 hover:scale-[1.006] ${darkMode
+        ? 'bg-gradient-to-br from-slate-900/78 via-slate-950/70 to-cyan-950/18 border-cyan-300/18 shadow-2xl shadow-cyan-950/30 backdrop-blur-2xl hover:border-cyan-300/45 hover:shadow-cyan-500/20'
         : 'bg-white border-slate-200 shadow-sm'
         }`}
     >

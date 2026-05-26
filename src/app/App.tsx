@@ -3,96 +3,83 @@ import Sidebar from './components/Sidebar';
 import FilterBar from './components/FilterBar';
 import KPICards from './components/KPICards';
 import ChartsSection from './components/ChartsSection';
+import FinanceCharts from './components/FinanceCharts';
 import SmartAlertsPanel from './components/SmartAlertsPanel';
 import UploadModule from './components/UploadModule';
 import ActivityTracking from './components/ActivityTracking';
-import ComparisonView from './components/ComparisonView';
 import ExportReports from './components/ExportReports';
 import LoginScreen from './components/LoginScreen';
 import RegisterScreen from './components/RegisterScreen';
 import ForgotPasswordScreen from './components/ForgotPasswordScreen';
-import Toast from './components/Toast';
+import Toast, { type ToastType } from './components/Toast';
 import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
+import { fetchDashboardData, type DashboardData } from './lib/dashboardData';
 
 type AuthScreen = 'login' | 'register' | 'forgot';
 type DashboardView = 'dashboard' | 'upload' | 'tracking' | 'settings' | 'alerts' | 'export';
-
-
+type DashboardArea = 'produccion' | 'finanzas';
+type AnimalFilter = 'bovinos' | 'gallinas' | 'ambos';
 
 export default function App() {
-  // Authentication state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authScreen, setAuthScreen] = useState<AuthScreen>('login');
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<ToastType>('success');
 
-  // Dashboard state
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentView, setCurrentView] = useState<DashboardView>('dashboard');
-  const [darkMode, setDarkMode] = useState(false);
-  const [selectedLivestock, setSelectedLivestock] = useState<'bovinos' | 'gallinas' | 'both'>('both');
+  const [darkMode, setDarkMode] = useState(true);
+  const [selectedArea, setSelectedArea] = useState<DashboardArea>('produccion');
+  const [selectedAnimal, setSelectedAnimal] = useState<AnimalFilter>('bovinos');
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [dashboardLoading, setDashboardLoading] = useState(false);
 
   const today = new Date();
-
-  const firstDay = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    1
-  );
-
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
   const [dateRange, setDateRange] = useState({
     from: firstDay.toISOString().split('T')[0],
-    to: today.toISOString().split('T')[0]
+    to: today.toISOString().split('T')[0],
   });
 
-  // Authentication handlers
-  const handleLogin = async (
-    email: string,
-    password: string,
-    rememberMe: boolean
-  ) => {
+  const openDashboardDefaults = () => {
+    setCurrentView('dashboard');
+    setSelectedArea('produccion');
+    setSelectedAnimal('bovinos');
+  };
 
-    const { data, error } =
-      await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password,
-      });
+  const pushToast = (message: string, type: ToastType = 'success') => {
+    setToastMessage(message);
+    setToastType(type);
+    setShowToast(true);
+  };
 
-    if (error) {
+  const getLoginErrorMessage = (message: string) => {
+    const normalized = message.toLowerCase();
 
-      setToastMessage(error.message);
-      setShowToast(true);
+    if (normalized.includes('invalid login')) return 'Correo o contraseña incorrecta';
+    if (normalized.includes('email')) return 'Correo incorrecto';
+    if (normalized.includes('password') || normalized.includes('contraseña')) return 'Contraseña incorrecta';
 
-      return;
-    }
+    return 'No se pudo iniciar sesión. Verifica tus datos.';
+  };
 
-    const user = data.user;
-
-    const emailLimpio = (user.email || '')
-      .trim()
-      .toLowerCase();
-
-    console.log('EMAIL AUTH:', emailLimpio);
+  const hydrateUser = async (email?: string | null) => {
+    const cleanEmail = (email || '').trim().toLowerCase();
 
     const { data: usuariosDB, error: usuarioError } = await supabase
       .from('usuarios')
       .select('*');
 
-    console.log('USUARIOS TABLA:', usuariosDB);
-    console.log('ERROR TABLA:', usuarioError);
-
     const usuarioDB = usuariosDB?.find(
-      u => u.email.trim().toLowerCase() === emailLimpio
+      (u: any) => u.email.trim().toLowerCase() === cleanEmail
     );
 
-    console.log('USUARIO ENCONTRADO:', usuarioDB);
-
     if (usuarioError || !usuarioDB) {
-      setToastMessage('No se encontró el usuario en la base de datos');
-      setShowToast(true);
-      return;
+      pushToast('Usuario no encontrado', 'error');
+      return false;
     }
 
     setCurrentUser({
@@ -102,10 +89,32 @@ export default function App() {
     });
 
     setIsAuthenticated(true);
+    openDashboardDefaults();
+    return true;
+  };
 
-    setToastMessage('¡Bienvenido!');
-    setShowToast(true);
+  const handleLogin = async (
+    email: string,
+    password: string,
+    rememberMe: boolean
+  ) => {
+    void rememberMe;
 
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password,
+    });
+
+    if (error) {
+      pushToast(getLoginErrorMessage(error.message), 'error');
+      return;
+    }
+
+    const hydrated = await hydrateUser(data.user.email);
+
+    if (hydrated) {
+      pushToast('Bienvenido a PONCEAGROSISTEM', 'success');
+    }
   };
 
   const handleRegister = async (
@@ -114,24 +123,19 @@ export default function App() {
     password: string,
     role: 'administrador' | 'operador'
   ) => {
-
-    const { data, error } =
-      await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name,
-            role,
-          }
-        }
-      });
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name,
+          role,
+        },
+      },
+    });
 
     if (error) {
-
-      setToastMessage(error.message);
-      setShowToast(true);
-
+      pushToast(error.message, 'error');
       return;
     }
 
@@ -142,45 +146,26 @@ export default function App() {
     });
 
     setIsAuthenticated(true);
-
-    setToastMessage('¡Cuenta creada!');
-    setShowToast(true);
-
+    openDashboardDefaults();
+    pushToast('Cuenta creada', 'success');
   };
-  
-  const handleForgotPassword = async (
-    email: string
-  ) => {
 
-    const { error } =
-      await supabase.auth.resetPasswordForEmail(
-        email
-      );
+  const handleForgotPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
 
-    if (error) {
-
-      setToastMessage(error.message);
-
-    } else {
-
-      setToastMessage(
-        'Correo de recuperación enviado'
-      );
-
-    }
-
-    setShowToast(true);
-
+    pushToast(
+      error ? error.message : 'Correo de recuperación enviado',
+      error ? 'error' : 'success'
+    );
   };
 
   const handleLogout = async () => {
-
     await supabase.auth.signOut();
 
     setCurrentUser(null);
     setIsAuthenticated(false);
     setAuthScreen('login');
-
+    openDashboardDefaults();
   };
 
   const getPageTitle = () => {
@@ -189,65 +174,41 @@ export default function App() {
     if (currentView === 'settings') return 'Configuración';
     if (currentView === 'alerts') return 'Alertas Inteligentes';
     if (currentView === 'export') return 'Exportar Reportes';
-    if (selectedLivestock === 'bovinos') return 'Resumen Bovinos';
-    if (selectedLivestock === 'gallinas') return 'Resumen Gallinas';
-    return 'Bovinos vs Gallinas';
+    return 'PONCEAGROSISTEM';
   };
 
+  const dashboardSubtitle =
+    selectedArea === 'produccion'
+      ? 'Área de Producción'
+      : 'Área Financiera';
+
   useEffect(() => {
-
     const getSession = async () => {
-
       const {
-        data: { session }
+        data: { session },
       } = await supabase.auth.getSession();
 
       if (session?.user) {
-
-        console.log('SESSION EMAIL:', session.user.email);
-
-
-        const emailLimpio = (session.user.email || '')
-          .trim()
-          .toLowerCase();
-
-        console.log('EMAIL AUTH:', emailLimpio);
-
-        const { data: usuariosDB, error: usuarioError } = await supabase
-          .from('usuarios')
-          .select('*');
-
-        console.log('USUARIOS TABLA:', usuariosDB);
-        console.log('ERROR TABLA:', usuarioError);
-
-        const usuarioDB = usuariosDB?.find(
-          u => u.email.trim().toLowerCase() === emailLimpio
-        );
-
-        console.log('USUARIO ENCONTRADO:', usuarioDB);
-
-        if (usuarioError || !usuarioDB) {
-          console.error('Usuario no encontrado en tabla usuarios');
-          return;
-        }
-
-        setCurrentUser({
-          name: usuarioDB.nombre,
-          email: usuarioDB.email,
-          role: usuarioDB.rol.toLowerCase(),
-        });
-
-        setIsAuthenticated(true);
-
+        await hydrateUser(session.user.email);
       }
-
     };
 
     getSession();
-
   }, []);
 
-  // Show authentication screens if not logged in
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const loadDashboardData = async () => {
+      setDashboardLoading(true);
+      const data = await fetchDashboardData(selectedAnimal, dateRange);
+      setDashboardData(data);
+      setDashboardLoading(false);
+    };
+
+    loadDashboardData();
+  }, [isAuthenticated, selectedAnimal, dateRange]);
+
   if (!isAuthenticated) {
     if (authScreen === 'register') {
       return (
@@ -268,20 +229,38 @@ export default function App() {
     }
 
     return (
-      <LoginScreen
-        onLogin={handleLogin}
-        onNavigateToRegister={() => setAuthScreen('register')}
-        onNavigateToForgot={() => setAuthScreen('forgot')}
-      />
+      <>
+        <Toast
+          message={toastMessage}
+          show={showToast}
+          type={toastType}
+          onClose={() => setShowToast(false)}
+        />
+        <LoginScreen
+          onLogin={handleLogin}
+          onNavigateToRegister={() => setAuthScreen('register')}
+          onNavigateToForgot={() => setAuthScreen('forgot')}
+        />
+      </>
     );
   }
 
-  // Show dashboard after authentication
   return (
-    <div className={`min-h-screen ${darkMode ? 'bg-slate-900' : 'bg-white'}`}>
+    <div
+      className={`min-h-screen ${darkMode ? 'bg-[#061326]' : 'bg-slate-100'}`}
+      style={
+        darkMode
+          ? {
+              background:
+                'radial-gradient(circle at 18% 8%, rgba(0,191,255,0.18), transparent 28%), radial-gradient(circle at 85% 12%, rgba(192,38,255,0.16), transparent 30%), linear-gradient(135deg, #061326 0%, #08172C 48%, #050B18 100%)',
+            }
+          : undefined
+      }
+    >
       <Toast
         message={toastMessage}
         show={showToast}
+        type={toastType}
         onClose={() => setShowToast(false)}
       />
 
@@ -300,53 +279,71 @@ export default function App() {
         open={sidebarOpen}
         currentView={currentView}
         setCurrentView={setCurrentView}
+        setSidebarOpen={setSidebarOpen}
         darkMode={darkMode}
         userRole={currentUser?.role}
       />
 
       <main className="pt-16">
-        <div className="max-w-[1600px] mx-auto px-6 py-8">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-6 sm:py-8">
           {currentView === 'dashboard' && (
             <>
+              <div className="mb-6">
+                <p className="text-xs uppercase tracking-[0.35em] text-cyan-300/80">
+                  Centro de Control
+                </p>
+                <h2 className={`mt-2 text-3xl font-light ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                  {dashboardSubtitle}
+                </h2>
+              </div>
+
               <FilterBar
-                selectedLivestock={selectedLivestock}
-                setSelectedLivestock={setSelectedLivestock}
+                selectedArea={selectedArea}
+                setSelectedArea={setSelectedArea}
+                selectedAnimal={selectedAnimal}
+                setSelectedAnimal={setSelectedAnimal}
                 dateRange={dateRange}
                 setDateRange={setDateRange}
                 darkMode={darkMode}
               />
 
-              {/* KPI Cards - Different display for 'both' mode */}
-              {selectedLivestock !== 'both' && (
-                <KPICards
-                  selectedLivestock={selectedLivestock}
-                  dateRange={dateRange}
-                  darkMode={darkMode}
-                />
-              )}
+              <KPICards
+                selectedLivestock={selectedAnimal}
+                selectedArea={selectedArea}
+                dateRange={dateRange}
+                darkMode={darkMode}
+                dashboardData={dashboardData}
+                loading={dashboardLoading}
+              />
 
-              {/* Charts and Alerts Layout */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Charts Section - Left Side (2/3 width) */}
-                <div className="lg:col-span-2">
-                  {selectedLivestock === 'both' ? (
-                    <ComparisonView darkMode={darkMode} dateRange={dateRange} />
-                  ) : (
-                    <ChartsSection
-                      selectedLivestock={selectedLivestock}
+                <div className={selectedArea === 'finanzas' ? 'lg:col-span-3' : 'lg:col-span-2'}>
+                  {selectedArea === 'finanzas' ? (
+                    <FinanceCharts
+                      selectedLivestock={selectedAnimal}
                       dateRange={dateRange}
                       darkMode={darkMode}
+                      dashboardData={dashboardData}
+                    />
+                  ) : (
+                    <ChartsSection
+                      selectedLivestock={selectedAnimal}
+                      dateRange={dateRange}
+                      darkMode={darkMode}
+                      dashboardData={dashboardData}
                     />
                   )}
                 </div>
 
-                {/* Smart Alerts Panel - Right Side (1/3 width) */}
-                <div className="lg:col-span-1">
-                  <SmartAlertsPanel
-                    selectedLivestock={selectedLivestock}
-                    darkMode={darkMode}
-                  />
-                </div>
+                {selectedArea === 'produccion' && (
+                  <div className="lg:col-span-1">
+                    <SmartAlertsPanel
+                      selectedLivestock={selectedAnimal === 'ambos' ? 'both' : selectedAnimal}
+                      darkMode={darkMode}
+                      dashboardData={dashboardData}
+                    />
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -364,9 +361,14 @@ export default function App() {
           )}
 
           {currentView === 'alerts' && (
-            <div className={`${darkMode ? 'bg-slate-800 text-white' : 'bg-white'} rounded-lg border border-slate-200 p-8`}>
+            <div className={`${darkMode ? 'bg-slate-900/70 text-white border-slate-700' : 'bg-white border-slate-200'} rounded-xl border p-8`}>
               <h2 className="text-2xl font-light mb-4">Alertas Inteligentes</h2>
-              <SmartAlertsPanel selectedLivestock="both" darkMode={darkMode} fullScreen />
+              <SmartAlertsPanel
+                selectedLivestock="both"
+                darkMode={darkMode}
+                fullScreen
+                dashboardData={dashboardData}
+              />
             </div>
           )}
         </div>
