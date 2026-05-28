@@ -372,6 +372,101 @@ export default function App() {
               />
             </div>
           )}
+
+          {currentView === 'settings' && (
+            <div className={`${darkMode ? 'bg-slate-900/70 text-white border-slate-700' : 'bg-white border-slate-200'} rounded-xl border p-8`}>
+              <h2 className="text-2xl font-light mb-6">Configuración del Sistema</h2>
+              
+              <div className="space-y-6">
+                {/* Sección de Perfil */}
+                <div className={`${darkMode ? 'bg-slate-800/50' : 'bg-slate-50'} rounded-lg p-6`}>
+                  <h3 className={`text-lg font-light mb-4 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                    Perfil de Usuario
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className={`block text-sm font-light mb-2 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                        Nombre
+                      </label>
+                      <p className={`text-base ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                        {currentUser?.name || 'Usuario'}
+                      </p>
+                    </div>
+                    <div>
+                      <label className={`block text-sm font-light mb-2 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                        Correo Electrónico
+                      </label>
+                      <p className={`text-base ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                        {currentUser?.email || 'email@ejemplo.com'}
+                      </p>
+                    </div>
+                    <div>
+                      <label className={`block text-sm font-light mb-2 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                        Rol
+                      </label>
+                      <p className={`text-base capitalize ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                        {currentUser?.role || 'operador'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sección de Preferencias */}
+                <div className={`${darkMode ? 'bg-slate-800/50' : 'bg-slate-50'} rounded-lg p-6`}>
+                  <h3 className={`text-lg font-light mb-4 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                    Preferencias
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className={`font-light ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                          Modo Oscuro
+                        </p>
+                        <p className={`text-sm font-light ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                          Activar tema oscuro en la interfaz
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setDarkMode(!darkMode)}
+                        className={`relative w-12 h-6 rounded-full transition-colors ${
+                          darkMode ? 'bg-blue-500' : 'bg-slate-300'
+                        }`}
+                      >
+                        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                          darkMode ? 'translate-x-7' : 'translate-x-1'
+                        }`} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sección de Información */}
+                <div className={`${darkMode ? 'bg-slate-800/50' : 'bg-slate-50'} rounded-lg p-6`}>
+                  <h3 className={`text-lg font-light mb-4 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                    Información del Sistema
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className={`font-light ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                        Versión
+                      </span>
+                      <span className={`${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                        1.0.0
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className={`font-light ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                        Última actualización
+                      </span>
+                      <span className={`${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                        {new Date().toLocaleDateString('es-ES')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </main>
     </div>
