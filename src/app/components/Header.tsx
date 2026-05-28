@@ -37,14 +37,21 @@ export default function Header({
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 ${darkMode ? 'bg-[#061326]/88 border-cyan-300/30' : 'bg-white/95 border-slate-200'} border-b h-16 transition-colors backdrop-blur-xl`}
+      className={`fixed top-0 left-0 right-0 z-50 ${
+        darkMode
+          ? 'bg-[#061326]/88 border-cyan-300/30'
+          : 'bg-white/85 border-slate-200/60'
+      } border-b h-16 transition-colors backdrop-blur-xl`}
       style={
         darkMode
           ? {
               boxShadow:
                 '0 0 0 1px rgba(0,191,255,0.12), 0 0 28px rgba(0,191,255,0.18), 0 16px 48px rgba(2,6,23,0.45), inset 0 -1px 18px rgba(34,211,238,0.08)',
             }
-          : undefined
+          : {
+              boxShadow:
+                '0 1px 3px 0 rgba(0, 0, 0, 0.07), 0 1px 2px -1px rgba(0, 0, 0, 0.06)',
+            }
       }
     >
       <div className="h-full px-4 sm:px-6 flex items-center justify-between">

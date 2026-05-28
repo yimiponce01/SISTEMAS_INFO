@@ -12,6 +12,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import FinanceGaugeIndicators from './FinanceGaugeIndicators';
 import type { DashboardData } from '../lib/dashboardData';
 
 type AnimalFilter = 'bovinos' | 'gallinas' | 'ambos';
@@ -23,8 +24,8 @@ interface FinanceChartsProps {
   dashboardData: DashboardData | null;
 }
 
-const formatTooltip = (value: unknown) =>
-  typeof value === 'number' ? value.toFixed(2) : value;
+const formatTooltip = (value: unknown): [string] =>
+  typeof value === 'number' ? [value.toFixed(2)] : [String(value)];
 
 export default function FinanceCharts({ selectedLivestock, darkMode, dashboardData }: FinanceChartsProps) {
   const monthlyData = dashboardData?.monthly || [];
@@ -67,6 +68,9 @@ export default function FinanceCharts({ selectedLivestock, darkMode, dashboardDa
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      {/* Semáforo Financiero - PRIMER ELEMENTO */}
+      <FinanceGaugeIndicators dashboardData={dashboardData} darkMode={darkMode} />
+
       <div className={chartCardClass}>
         <h3 className={titleClass}>Evolución Financiera</h3>
         <ResponsiveContainer width="100%" height={260}>

@@ -17,6 +17,7 @@ import {
 } from 'recharts';
 import GaugeIndicators from './GaugeIndicators';
 import HealthGauge from './HealthGauge';
+import TopProductiveMonths from './TopProductiveMonths';
 import type { DashboardData } from '../lib/dashboardData';
 
 type AnimalFilter = 'bovinos' | 'gallinas' | 'ambos';
@@ -30,8 +31,22 @@ interface ChartsSectionProps {
 
 const COLORS = ['#38BDF8', '#F97316', '#22C55E', '#EAB308', '#EF4444'];
 
-const formatTooltip = (value: unknown) =>
-  typeof value === 'number' ? value.toFixed(2) : value;
+const formatTooltip = (value: unknown, name: string): [string, string] => {
+  const formatted = typeof value === 'number' ? value.toFixed(2) : String(value);
+  const labels: Record<string, string> = {
+    bovinos: 'Bovinos',
+    gallinas: 'Gallinas',
+    bovinosMuertes: 'Muertes Bovinos',
+    gallinasMuertes: 'Muertes Gallinas',
+    nacimientos: 'Nacimientos',
+    muertes: 'Muertes',
+    produccion: 'Producción',
+    ventas: 'Ventas',
+    ingresos: 'Ingresos',
+    gastos: 'Gastos',
+  };
+  return [formatted, labels[name] || name];
+};
 
 export default function ChartsSection({ selectedLivestock, darkMode, dashboardData }: ChartsSectionProps) {
   const monthlyData = dashboardData?.monthly || [];
@@ -89,6 +104,7 @@ export default function ChartsSection({ selectedLivestock, darkMode, dashboardDa
     month: item.month,
     bovinos: item.bovinosProduccion,
     gallinas: item.gallinasProduccion,
+    total: item.bovinosProduccion + item.gallinasProduccion,
     bovinosMuertes: item.bovinosMuertes,
     gallinasMuertes: item.gallinasMuertes,
   }));
@@ -160,14 +176,37 @@ export default function ChartsSection({ selectedLivestock, darkMode, dashboardDa
       <div className={chartCardClass}>
         <h3 className={titleClass}>Nacimientos vs Muertes</h3>
         <ResponsiveContainer width="100%" height={240}>
-          <AreaChart data={productionData}>
+          <AreaChart data={monthlyData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
             <XAxis dataKey="month" stroke="#94a3b8" style={{ fontSize: '12px' }} />
             <YAxis stroke="#94a3b8" style={{ fontSize: '12px' }} />
             <Tooltip contentStyle={tooltipStyle} formatter={formatTooltip} />
-            <Legend wrapperStyle={{ fontSize: '12px' }} />
-            <Area type="monotone" dataKey="nacimientos" stroke="#22C55E" fill="#22C55E" fillOpacity={0.35} />
-            <Area type="monotone" dataKey="muertes" stroke="#EF4444" fill="#EF4444" fillOpacity={0.35} />
+            <Legend
+              wrapperStyle={{ fontSize: '12px' }}
+              formatter={(value) => {
+                const labels: Record<string, string> = {
+                  nacimientos: 'Nacimientos',
+                  muertes: 'Muertes',
+                };
+                return <span className={darkMode ? 'text-slate-300' : 'text-slate-700'}>{labels[value] || value}</span>;
+              }}
+            />
+            <Area
+              type="monotone"
+              dataKey="nacimientos"
+              name="Nacimientos"
+              stroke="#22C55E"
+              fill="#22C55E"
+              fillOpacity={0.35}
+            />
+            <Area
+              type="monotone"
+              dataKey="muertes"
+              name="Muertes"
+              stroke="#EF4444"
+              fill="#EF4444"
+              fillOpacity={0.35}
+            />
           </AreaChart>
         </ResponsiveContainer>
       </div>
@@ -218,25 +257,20 @@ export default function ChartsSection({ selectedLivestock, darkMode, dashboardDa
             <YAxis stroke="#94a3b8" style={{ fontSize: '12px' }} />
             <Tooltip contentStyle={tooltipStyle} formatter={formatTooltip} />
             <Legend wrapperStyle={{ fontSize: '12px' }} />
-            <Bar dataKey="bovinos" fill="#38BDF8" radius={[6, 6, 0, 0]} />
-            <Bar dataKey="gallinas" fill="#F97316" radius={[6, 6, 0, 0]} />
-            <Line type="monotone" dataKey="bovinos" stroke="#67e8f9" strokeWidth={2} />
+            <Bar dataKey="bovinos" name="Bovinos" fill="#38BDF8" radius={[6, 6, 0, 0]} />
+            <Bar dataKey="gallinas" name="Gallinas" fill="#F97316" radius={[6, 6, 0, 0]} />
+            <Line type="monotone" dataKey="total" name="Total" stroke="#67e8f9" strokeWidth={2} />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
 
-      <div className={chartCardClass}>
-        <h3 className={titleClass}>Top Meses Productivos</h3>
-        <ResponsiveContainer width="100%" height={240}>
-          <BarChart data={topData} layout="vertical">
-            <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-            <XAxis type="number" stroke="#94a3b8" style={{ fontSize: '12px' }} />
-            <YAxis dataKey="id" type="category" stroke="#94a3b8" style={{ fontSize: '12px' }} width={50} />
-            <Tooltip contentStyle={tooltipStyle} formatter={formatTooltip} />
-            <Bar dataKey="production" fill={primaryColor} radius={[0, 6, 6, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      {/* Top Meses Productivos - Componente mejorado */}
+      <TopProductiveMonths
+        selectedLivestock={selectedLivestock}
+        dateRange={{ from: '', to: '' }}
+        darkMode={darkMode}
+        dashboardData={dashboardData}
+      />
 
       <div className={chartCardClass}>
         <h3 className={titleClass}>Semáforo de Salud</h3>

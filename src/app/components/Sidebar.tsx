@@ -47,7 +47,7 @@ export default function Sidebar({
         } ${
           darkMode
             ? 'border-cyan-300/10 bg-slate-950/90'
-            : 'border-slate-200 bg-white/95'
+            : 'border-slate-200/60 bg-white/85'
         }`}
       >
         <nav className="p-4 space-y-2">

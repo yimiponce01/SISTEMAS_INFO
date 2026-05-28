@@ -12,6 +12,7 @@ interface SmartAlertsPanelProps {
   darkMode: boolean;
   fullScreen?: boolean;
   dashboardData?: DashboardData | null;
+  selectedArea?: 'produccion' | 'finanzas'; // NUEVO: filtro por área
 }
 
 export default function SmartAlertsPanel({
@@ -19,6 +20,7 @@ export default function SmartAlertsPanel({
   darkMode,
   fullScreen,
   dashboardData,
+  selectedArea = 'produccion', // Por defecto producción
 }: SmartAlertsPanelProps) {
   const totals = dashboardData?.totals;
 
@@ -34,65 +36,145 @@ export default function SmartAlertsPanel({
       color: 'blue',
     });
   } else {
-    if ((totals?.muertes || 0) > 0) {
-      alerts.push({
-        type: 'critical',
-        icon: AlertCircle,
-        title: 'Muertes Registradas',
-        message: `Se registraron ${totals?.muertes || 0} muertes en el sistema`,
-        timestamp: 'Ahora',
-        color: 'red',
-      });
+    // ========================================
+    // ALERTAS ESPECÍFICAS POR ÁREA
+    // ========================================
+    
+    if (selectedArea === 'produccion') {
+      // Alertas de PRODUCCIÓN
+      if ((totals?.muertes || 0) > 0) {
+        alerts.push({
+          type: 'critical',
+          icon: AlertCircle,
+          title: 'Muertes Registradas',
+          message: `Se registraron ${totals?.muertes || 0} muertes en producción`,
+          timestamp: 'Ahora',
+          color: 'red',
+        });
+      }
+
+      if ((totals?.enfermedades || 0) > 0) {
+        alerts.push({
+          type: 'warning',
+          icon: AlertTriangle,
+          title: 'Enfermedades Detectadas',
+          message: `Hay ${totals?.enfermedades || 0} registros de enfermedades`,
+          timestamp: 'Ahora',
+          color: 'amber',
+        });
+      }
+
+      if ((totals?.produccion || 0) > 0) {
+        alerts.push({
+          type: 'success',
+          icon: TrendingUp,
+          title: 'Producción Registrada',
+          message: `La producción total es ${Number(totals?.produccion || 0).toFixed(2)}`,
+          timestamp: 'Ahora',
+          color: 'green',
+        });
+      }
+
+      if ((totals?.nacimientos || 0) > 0) {
+        alerts.push({
+          type: 'success',
+          icon: TrendingUp,
+          title: 'Nacimientos Registrados',
+          message: `Se registraron ${totals?.nacimientos || 0} nacimientos`,
+          timestamp: 'Ahora',
+          color: 'green',
+        });
+      }
+
+      if ((totals?.animales || 0) > 0) {
+        alerts.push({
+          type: 'recommendation',
+          icon: Lightbulb,
+          title: 'Animales Activos',
+          message: `Hay ${totals?.animales || 0} animales en el filtro actual`,
+          timestamp: 'Ahora',
+          color: 'blue',
+        });
+      }
+    } else {
+      // Alertas de FINANZAS
+      if ((totals?.ingresos || 0) > 0) {
+        alerts.push({
+          type: 'success',
+          icon: TrendingUp,
+          title: 'Ingresos Registrados',
+          message: `Ingresos totales: $${Number(totals?.ingresos || 0).toFixed(2)}`,
+          timestamp: 'Ahora',
+          color: 'green',
+        });
+      }
+
+      if ((totals?.gastos || 0) > 0) {
+        const gastoRatio = totals?.ingresos ? (totals.gastos / totals.ingresos) * 100 : 0;
+        if (gastoRatio > 70) {
+          alerts.push({
+            type: 'critical',
+            icon: AlertCircle,
+            title: 'Gastos Elevados',
+            message: `Los gastos representan ${gastoRatio.toFixed(1)}% de los ingresos`,
+            timestamp: 'Ahora',
+            color: 'red',
+          });
+        } else {
+          alerts.push({
+            type: 'info',
+            icon: Info,
+            title: 'Gastos Registrados',
+            message: `Gastos totales: $${Number(totals?.gastos || 0).toFixed(2)}`,
+            timestamp: 'Ahora',
+            color: 'blue',
+          });
+        }
+      }
+
+      if ((totals?.ganancias || 0) !== 0) {
+        alerts.push({
+          type: totals?.ganancias && totals.ganancias > 0 ? 'success' : 'critical',
+          icon: totals?.ganancias && totals.ganancias > 0 ? TrendingUp : AlertCircle,
+          title: totals?.ganancias && totals.ganancias > 0 ? 'Ganancias Positivas' : 'Pérdidas Detectadas',
+          message: totals?.ganancias && totals.ganancias > 0
+            ? `Ganancia total: $${Number(totals?.ganancias || 0).toFixed(2)}`
+            : `Pérdida total: $${Number(totals?.ganancias || 0).toFixed(2)}`,
+          timestamp: 'Ahora',
+          color: totals?.ganancias && totals.ganancias > 0 ? 'green' : 'red',
+        });
+      }
+
+      if ((totals?.ventas || 0) > 0) {
+        alerts.push({
+          type: 'success',
+          icon: TrendingUp,
+          title: 'Ventas Realizadas',
+          message: `Se realizaron ${totals?.ventas || 0} ventas`,
+          timestamp: 'Ahora',
+          color: 'green',
+        });
+      }
+
+      if ((totals?.rentabilidad || 0) > 0) {
+        alerts.push({
+          type: 'recommendation',
+          icon: Lightbulb,
+          title: 'Rentabilidad',
+          message: `Rentabilidad: ${totals?.rentabilidad?.toFixed(1) || 0}%`,
+          timestamp: 'Ahora',
+          color: 'blue',
+        });
+      }
     }
 
-    if ((totals?.enfermedades || 0) > 0) {
-      alerts.push({
-        type: 'warning',
-        icon: AlertTriangle,
-        title: 'Enfermedades Detectadas',
-        message: `Hay ${totals?.enfermedades || 0} registros de enfermedades`,
-        timestamp: 'Ahora',
-        color: 'amber',
-      });
-    }
-
-    if ((totals?.produccion || 0) > 0) {
-      alerts.push({
-        type: 'success',
-        icon: TrendingUp,
-        title: 'Producción Registrada',
-        message: `La producción total actual es ${Number(totals?.produccion || 0).toFixed(2)}`,
-        timestamp: 'Ahora',
-        color: 'green',
-      });
-    }
-
-    alerts.push({
-      type: 'info',
-      icon: Info,
-      title: 'Balance General',
-      message: `Ganancia total actual: $${Number(totals?.ganancias || 0).toFixed(2)}`,
-      timestamp: 'Ahora',
-      color: (totals?.ganancias || 0) >= 0 ? 'green' : 'red',
-    });
-
-    if ((totals?.animales || 0) > 0) {
-      alerts.push({
-        type: 'recommendation',
-        icon: Lightbulb,
-        title: 'Sistema Activo',
-        message: `Hay ${totals?.animales || 0} animales registrados en el filtro actual`,
-        timestamp: 'Ahora',
-        color: 'blue',
-      });
-    }
-
-    if (alerts.length === 1 && (totals?.ganancias || 0) === 0) {
+    // Alerta genérica si no hay datos
+    if (alerts.length === 0) {
       alerts.push({
         type: 'info',
         icon: Info,
         title: 'Sin registros',
-        message: 'No hay registros productivos o financieros en el rango seleccionado',
+        message: `No hay registros de ${selectedArea === 'produccion' ? 'producción' : 'finanzas'} en el rango seleccionado`,
         timestamp: 'Ahora',
         color: 'blue',
       });

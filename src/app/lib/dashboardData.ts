@@ -62,9 +62,9 @@ export interface DashboardData {
 const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
 const animalTypeIds: Record<AnimalFilter, number[]> = {
-  bovinos: [1],
-  gallinas: [2],
-  ambos: [1, 2],
+  bovinos: [1, 3, 4],
+  gallinas: [2, 5],
+  ambos: [1, 2, 3, 4, 5],
 };
 
 const emptyMonthly = (): Record<string, DashboardMonthlyData> => {
@@ -173,29 +173,49 @@ export async function fetchDashboardData(
   const selectedIds = animalTypeIds[selectedAnimal];
 
   const animales = await safeSelect(
-    'animales',
-    supabase.from('animales').select('*').in('id_tipo', selectedIds)
+  'animales',
+  supabase
+    .from('animales')
+    .select('*')
+    .in('id_tipo', selectedIds)
+    .lte('fecha_ingreso', dateRange.to)
+);
+console.log('SELECTED IDS:', selectedIds);
+console.log('ANIMALES RAW (hasta fecha final):', animales);
+
+const animalIds = animales.map((animal: any) =>
+  Number(animal.id_animal)
+);
+
+const bovinoIds = animales
+  .filter((animal: any) =>
+    [1, 3, 4].includes(Number(animal.id_tipo))
+  )
+  .map((animal: any) =>
+    Number(animal.id_animal)
   );
 
-  const animalIds = animales.map((animal: any) => Number(animal.id_animal));
-  const bovinoIds = animales
-    .filter((animal: any) => Number(animal.id_tipo) === 1)
-    .map((animal: any) => Number(animal.id_animal));
-  const gallinaIds = animales
-    .filter((animal: any) => Number(animal.id_tipo) === 2)
-    .map((animal: any) => Number(animal.id_animal));
-  const emptyAnimalFilter = [-1];
+const gallinaIds = animales
+  .filter((animal: any) =>
+    [2, 5].includes(Number(animal.id_tipo))
+  )
+  .map((animal: any) =>
+    Number(animal.id_animal)
+  );
+
+const emptyAnimalFilter = [-1];
 
   const [
-    produccion,
-    ingresos,
-    gastos,
-    ventas,
-    nacimientos,
-    muertes,
-    enfermedades,
-    incubaciones,
-  ] = await Promise.all([
+  produccion,
+  ingresos,
+  gastos,
+  ventasMovimientos,
+  nacimientos,
+  muertes,
+  enfermedades,
+  movimientos,
+  incubaciones,
+] = await Promise.all([
     safeSelect(
       'produccion',
       supabase
@@ -223,7 +243,15 @@ export async function fetchDashboardData(
         .gte('fecha', dateRange.from)
         .lte('fecha', dateRange.to)
     ),
-    safeSelect('ventas', supabase.from('ventas').select('*')),
+    safeSelect(
+      'movimientos_venta',
+      supabase
+        .from('movimientos_animales')
+        .select('*')
+        .eq('id_tipo_movimiento', 2)
+        .in('id_animal', animalIds.length ? animalIds : emptyAnimalFilter)
+        .lte('fecha', dateRange.to)
+    ),
     safeSelect(
       'nacimientos',
       supabase
@@ -243,7 +271,6 @@ export async function fetchDashboardData(
         .from('muertes')
         .select('*')
         .in('id_animal', animalIds.length ? animalIds : emptyAnimalFilter)
-        .gte('fecha_muerte', dateRange.from)
         .lte('fecha_muerte', dateRange.to)
     ),
     safeSelect(
@@ -252,13 +279,23 @@ export async function fetchDashboardData(
         .from('enfermedades')
         .select('*')
         .in('id_animal', animalIds.length ? animalIds : emptyAnimalFilter)
+        .gte('fecha', dateRange.from)
+        .lte('fecha', dateRange.to)
     ),
+    safeSelect(
+  'movimientos_animales',
+  supabase
+    .from('movimientos_animales')
+    .select('*')
+    .in('id_animal', animalIds.length ? animalIds : emptyAnimalFilter)
+    .lte('fecha', dateRange.to)
+),
     selectedAnimal === 'gallinas' || selectedAnimal === 'ambos'
       ? safeSelect('incubacion', supabase.from('incubacion').select('*'))
       : Promise.resolve([]),
   ]);
-
-  const filteredVentas = ventas.filter(
+movimientos
+  const filteredVentas = ventasMovimientos.filter(
     (item: any) =>
       belongsToSelection(item, selectedIds, animalIds) &&
       isWithinDateRange(item, dateRange)
@@ -276,23 +313,31 @@ export async function fetchDashboardData(
 
   produccion.forEach((item: any) => {
     const prefix = animalPrefix(Number(item.id_animal), bovinoIds);
-    monthlyMap[monthKey(item.fecha)][`${prefix}Produccion` as keyof DashboardMonthlyData] =
-      Number(monthlyMap[monthKey(item.fecha)][`${prefix}Produccion` as keyof DashboardMonthlyData]) +
+    const month = monthlyMap[monthKey(item.fecha)];
+
+    (month as any)[`${prefix}Produccion`] =
+      Number((month as any)[`${prefix}Produccion`] || 0) +
       Number(item.cantidad || item.produccion || 0);
   });
 
   ingresos.forEach((item: any) => {
-    const prefix = Number(item.id_tipo_animal) === 1 ? 'bovinos' : 'gallinas';
+    const isBov = [1, 3, 4].includes(Number(item.id_tipo_animal));
+    const prefix = isBov ? 'bovinos' : 'gallinas';
     const month = monthlyMap[monthKey(item.fecha)];
-    month[`${prefix}Ingresos` as keyof DashboardMonthlyData] =
-      Number(month[`${prefix}Ingresos` as keyof DashboardMonthlyData]) + Number(item.monto || 0);
+
+    (month as any)[`${prefix}Ingresos`] =
+      Number((month as any)[`${prefix}Ingresos`] || 0) +
+      Number(item.monto || 0);
   });
 
   gastos.forEach((item: any) => {
-    const prefix = Number(item.id_tipo_animal) === 1 ? 'bovinos' : 'gallinas';
+    const isBov = [1, 3, 4].includes(Number(item.id_tipo_animal));
+    const prefix = isBov ? 'bovinos' : 'gallinas';
     const month = monthlyMap[monthKey(item.fecha)];
-    month[`${prefix}Gastos` as keyof DashboardMonthlyData] =
-      Number(month[`${prefix}Gastos` as keyof DashboardMonthlyData]) + Number(item.monto || 0);
+
+    (month as any)[`${prefix}Gastos`] =
+      Number((month as any)[`${prefix}Gastos`] || 0) +
+      Number(item.monto || 0);
   });
 
   filteredVentas.forEach((item: any) => {
@@ -302,26 +347,37 @@ export async function fetchDashboardData(
         : Number(item.id_tipo_animal) === 1
           ? 'bovinos'
           : 'gallinas';
+
     const month = monthlyMap[monthKey(item.fecha)];
-    month[`${prefix}Ventas` as keyof DashboardMonthlyData] =
-      Number(month[`${prefix}Ventas` as keyof DashboardMonthlyData]) + 1;
+
+    (month as any)[`${prefix}Ventas`] =
+      Number((month as any)[`${prefix}Ventas`] || 0) + 1;
   });
 
   nacimientos.forEach((item: any) => {
     const prefix =
-      isBovino(Number(item.id_madre), bovinoIds) || isBovino(Number(item.id_padre), bovinoIds)
+      isBovino(Number(item.id_madre), bovinoIds) ||
+      isBovino(Number(item.id_padre), bovinoIds)
         ? 'bovinos'
         : 'gallinas';
+
     const month = monthlyMap[monthKey(item.fecha_nacimiento)];
-    month[`${prefix}Nacimientos` as keyof DashboardMonthlyData] =
-      Number(month[`${prefix}Nacimientos` as keyof DashboardMonthlyData]) + 1;
+
+    (month as any)[`${prefix}Nacimientos`] =
+      Number((month as any)[`${prefix}Nacimientos`] || 0) + 1;
   });
 
-  muertes.forEach((item: any) => {
+  // Mostrar solo muertes DENTRO del rango en los gráficos
+  const muertesEnRango = muertes.filter((item: any) =>
+    isWithinDateRange(item, dateRange)
+  );
+
+  muertesEnRango.forEach((item: any) => {
     const prefix = animalPrefix(Number(item.id_animal), bovinoIds);
     const month = monthlyMap[monthKey(item.fecha_muerte)];
-    month[`${prefix}Muertes` as keyof DashboardMonthlyData] =
-      Number(month[`${prefix}Muertes` as keyof DashboardMonthlyData]) + 1;
+
+    (month as any)[`${prefix}Muertes`] =
+      Number((month as any)[`${prefix}Muertes`] || 0) + 1;
   });
 
   const monthly = Object.values(monthlyMap).map((item) => ({
@@ -340,20 +396,66 @@ export async function fetchDashboardData(
   const totalGanancias = totalIngresos - totalGastos;
   const totalVentas = filteredVentas.length;
   const totalProduccion = sumAmount(produccion, ['cantidad', 'produccion']);
-  const totalNacimientos = nacimientos.length;
-  const totalMuertes = muertes.length;
-  const totalEnfermedades = filteredEnfermedades.length;
-  const totalAnimales = animales.length;
-  const totalIncubaciones = filteredIncubaciones.length;
+  const totalNacimientos = nacimientos.filter((item: any) =>
+    isWithinDateRange(item, dateRange)
+  ).length;
+  const filteredMuertes = muertes.filter((m: any) => {
+  const fecha = new Date(m.fecha_muerte);
 
-  const healthGauge = {
-    red: totalAnimales ? (totalMuertes / totalAnimales) * 100 : 0,
-    yellow: totalAnimales ? (totalEnfermedades / totalAnimales) * 100 : 0,
-    green: Math.max(
-      0,
-      100 - (totalAnimales ? ((totalMuertes + totalEnfermedades) / totalAnimales) * 100 : 0)
-    ),
-  };
+  const inRange =
+    fecha >= new Date(dateRange.from) &&
+    fecha <= new Date(dateRange.to);
+
+  if (selectedAnimal === 'bovinos') {
+    return inRange && [1, 3, 4].includes(Number(m.id_tipo_animal));
+  }
+
+  if (selectedAnimal === 'gallinas') {
+    return inRange && [2, 5].includes(Number(m.id_tipo_animal));
+  }
+
+  return inRange;
+});
+
+const totalMuertes = filteredMuertes.length;
+  const totalEnfermedades = filteredEnfermedades.length;
+
+const vendidosIds = ventasMovimientos
+  .map((m: any) => Number(m.id_animal));
+
+const muertosIds = muertes.map(
+  (m: any) => Number(m.id_animal)
+);
+
+const animalesActivosHistoricos = animales.filter(
+  (animal: any) =>
+    !vendidosIds.includes(Number(animal.id_animal)) &&
+    !muertosIds.includes(Number(animal.id_animal))
+);
+
+console.log('ANIMALES INGRESADOS (hasta fecha final):', animales.length);
+console.log('VACAS:', animales.filter((a: any) => Number(a.id_tipo) === 1).length);
+console.log('TOROS:', animales.filter((a: any) => Number(a.id_tipo) === 3).length);
+console.log('CRIAS BOVINAS:', animales.filter((a: any) => Number(a.id_tipo) === 4).length);
+console.log('GALLINAS:', animales.filter((a: any) => Number(a.id_tipo) === 2).length);
+console.log('POLLITOS:', animales.filter((a: any) => Number(a.id_tipo) === 5).length);
+console.log('VENDIDOS (hasta fecha final):', vendidosIds.length);
+console.log('MUERTOS (hasta fecha final):', muertosIds.length);
+console.log('ACTIVOS AL FINAL DEL PERIODO:', animalesActivosHistoricos.length);
+
+const totalAnimales = animalesActivosHistoricos.length;
+const totalIncubaciones = filteredIncubaciones.length;
+
+const healthGauge = {
+  red: totalAnimales ? (totalMuertes / totalAnimales) * 100 : 0,
+  yellow: totalAnimales ? (totalEnfermedades / totalAnimales) * 100 : 0,
+  green: Math.max(
+    0,
+    100 - (totalAnimales
+      ? ((totalMuertes + totalEnfermedades) / totalAnimales) * 100
+      : 0)
+  ),
+};
 
   const dashboardData: DashboardData = {
     selectedAnimal,

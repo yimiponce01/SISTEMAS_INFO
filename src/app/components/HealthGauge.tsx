@@ -36,12 +36,32 @@ function describeArc(startAngle: number, endAngle: number, distance = radius) {
 export default function HealthGauge({ data, darkMode }: HealthGaugeProps) {
   const [animatedAngle, setAnimatedAngle] = useState(180);
 
-  const segments = useMemo(
+  // Normalizar valores para que sumen exactamente 100%
+  // Si un valor es 0, NO se renderiza su segmento
+  const normalizedData = useMemo(() => {
+    const red = Math.max(0, data.red);
+    const yellow = Math.max(0, data.yellow);
+    const green = Math.max(0, data.green);
+    const total = red + yellow + green;
+    
+    if (total === 0) return { red: 33.33, yellow: 33.33, green: 33.34 };
+    
+    // Distribución proporcional
+    return {
+      red: (red / total) * 100,
+      yellow: (yellow / total) * 100,
+      green: (green / total) * 100,
+    };
+  }, [data.red, data.yellow, data.green]);
+
+  // Solo incluir segmentos con valor > 0
+  const allSegments = useMemo(
     () => [
       {
         key: 'red',
         label: 'Crítico',
-        value: Math.max(0, data.red),
+        value: normalizedData.red,
+        rawValue: data.red,
         color: '#ff4d5e',
         glow: 'rgba(255, 77, 94, 0.58)',
         start: 180,
@@ -50,7 +70,8 @@ export default function HealthGauge({ data, darkMode }: HealthGaugeProps) {
       {
         key: 'yellow',
         label: 'Regular',
-        value: Math.max(0, data.yellow),
+        value: normalizedData.yellow,
+        rawValue: data.yellow,
         color: '#ffd447',
         glow: 'rgba(255, 212, 71, 0.58)',
         start: 244,
@@ -59,18 +80,42 @@ export default function HealthGauge({ data, darkMode }: HealthGaugeProps) {
       {
         key: 'green',
         label: 'Excelente',
-        value: Math.max(0, data.green),
+        value: normalizedData.green,
+        rawValue: data.green,
         color: '#35ff93',
         glow: 'rgba(53, 255, 147, 0.58)',
         start: 302,
         end: 360,
       },
     ],
-    [data.red, data.yellow, data.green]
+    [normalizedData.red, normalizedData.yellow, normalizedData.green, data.red, data.yellow, data.green]
   );
 
+  // Filtrar segmentos con valor 0 (no renderizar)
+  const segments = useMemo(
+    () => allSegments.filter(s => s.rawValue > 0),
+    [allSegments]
+  );
+
+  // Encontrar el segmento con mayor valor - con manejo seguro de arrays vacíos
   const highest = useMemo(
-    () => segments.reduce((current, item) => (item.value > current.value ? item : current)),
+    () => {
+      if (segments.length === 0) {
+        // Fallback: si no hay segmentos, usar verde como estado neutral
+        return {
+          key: 'green',
+          label: 'Neutral',
+          value: 100,
+          rawValue: 0,
+          color: '#35ff93',
+          glow: 'rgba(53, 255, 147, 0.58)',
+          start: 302,
+          end: 360,
+        };
+      }
+      // Usar el primer elemento como valor inicial para reduce
+      return segments.reduce((current, item) => (item.value > current.value ? item : current), segments[0]);
+    },
     [segments]
   );
 

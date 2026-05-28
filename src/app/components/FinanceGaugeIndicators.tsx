@@ -5,7 +5,7 @@ import type { DashboardData } from '../lib/dashboardData';
 // TYPES
 // ============================================================================
 
-interface GaugeIndicatorsProps {
+interface FinanceGaugeIndicatorsProps {
   dashboardData: DashboardData | null;
   darkMode: boolean;
 }
@@ -27,7 +27,7 @@ interface MetricSegment {
   startAngle: number;
   endAngle: number;
   midAngle: number;
-  groupedMetrics?: MetricData[]; // Para el sistema "Otros"
+  groupedMetrics?: MetricData[];
   isGroup?: boolean;
 }
 
@@ -118,87 +118,85 @@ function getPosicion(porcentaje: number): 'izquierda' | 'centro' | 'derecha' {
 }
 
 // ============================================================================
-// CÁLCULO DE MÉTRICAS DESDE DATOS REALES (SOLO SUPABASE)
+// CÁLCULO DE MÉTRICAS FINANCIERAS DESDE DATOS REALES (SOLO SUPABASE)
 // ============================================================================
 
-function calculateMetricsFromData(totals: DashboardData['totals']) {
+function calculateFinanceMetricsFromData(totals: DashboardData['totals']) {
   if (!totals) return null;
 
-  // --- Métricas base (normalizadas 0-100) ---
-  const produccionEsperada = 1000;
-  const produccionScore = clamp((totals.produccion / produccionEsperada) * 100, 0, 100);
-
-  const tasaMortalidad = safeDivide(totals.muertes, totals.animales, 0) * 100;
-  const tasaEnfermedades = safeDivide(totals.enfermedades, totals.animales, 0) * 100;
-  const saludScore = clamp(100 - tasaMortalidad - tasaEnfermedades, 0, 100);
-
+  // --- Métricas financieras base (normalizadas 0-100) ---
+  
+  // Rentabilidad (ganancias/ingresos * 100) - máximo 100
   const rentabilidadScore = clamp(safeDivide(totals.ganancias, totals.ingresos, 0) * 100, 0, 100);
-
-  const eficienciaScore = totals.muertes > 0
-    ? clamp((totals.nacimientos / totals.muertes) * 50, 0, 100)
-    : totals.nacimientos > 0 ? 100 : 0;
-
-  const mortalidadScore = clamp(100 - tasaMortalidad * 10, 0, 100);
-  const enfermedadesScore = clamp(100 - tasaEnfermedades * 7, 0, 100);
+  
+  // Eficiencia de gastos (mientras menos gastos respecto a ingresos, mejor)
+  const gastoRatio = safeDivide(totals.gastos, totals.ingresos, 1);
+  const eficienciaGastosScore = clamp((1 - gastoRatio) * 100, 0, 100);
+  
+  // Volumen de ingresos (normalizado - asumiendo 10000 como referencia)
+  const ingresosScore = clamp((totals.ingresos / 10000) * 100, 0, 100);
+  
+  // Balance (positivo = bueno)
+  const balanceScore = totals.balance >= 0 
+    ? clamp((totals.balance / Math.max(totals.ingresos * 0.3, 1)) * 100, 0, 100)
+    : clamp(50 + (totals.balance / Math.max(Math.abs(totals.gastos) * 0.3, 1)) * 50, 0, 50);
+  
+  // Actividad de ventas (normalizado - asumiendo 50 ventas como referencia)
+  const ventasScore = clamp((totals.ventas / 50) * 100, 0, 100);
 
   const rawScores = {
-    produccion: produccionScore,
-    salud: saludScore,
-    ingresos: rentabilidadScore,
-    eficiencia: eficienciaScore,
-    mortalidad: mortalidadScore,
-    enfermedades: enfermedadesScore,
+    rentabilidad: rentabilidadScore,
+    eficiencia: eficienciaGastosScore,
+    ingresos: ingresosScore,
+    balance: balanceScore,
+    ventas: ventasScore,
   };
 
-  // --- Pesos ponderados ---
+  // --- Pesos ponderados para métricas financieras ---
   const weights = {
-    produccion: 0.30,
-    salud: 0.25,
+    rentabilidad: 0.30,
+    eficiencia: 0.25,
+    balance: 0.20,
     ingresos: 0.15,
-    eficiencia: 0.15,
-    mortalidad: 0.08,
-    enfermedades: 0.07,
+    ventas: 0.10,
   };
 
   // --- Calcular contribuciones ---
   const contributions = {
-    produccion: rawScores.produccion * weights.produccion,
-    salud: rawScores.salud * weights.salud,
-    ingresos: rawScores.ingresos * weights.ingresos,
+    rentabilidad: rawScores.rentabilidad * weights.rentabilidad,
     eficiencia: rawScores.eficiencia * weights.eficiencia,
-    mortalidad: rawScores.mortalidad * weights.mortalidad,
-    enfermedades: rawScores.enfermedades * weights.enfermedades,
+    balance: rawScores.balance * weights.balance,
+    ingresos: rawScores.ingresos * weights.ingresos,
+    ventas: rawScores.ventas * weights.ventas,
   };
 
   const totalContribution =
-    contributions.produccion + contributions.salud + contributions.ingresos +
-    contributions.eficiencia + contributions.mortalidad + contributions.enfermedades;
+    contributions.rentabilidad + contributions.eficiencia + contributions.balance +
+    contributions.ingresos + contributions.ventas;
 
   // --- Distribuir porcentajes para que sumen EXACTAMENTE 100% ---
   const percentages = {
-    produccion: totalContribution > 0 ? (contributions.produccion / totalContribution) * 100 : 16.67,
-    salud: totalContribution > 0 ? (contributions.salud / totalContribution) * 100 : 16.67,
-    ingresos: totalContribution > 0 ? (contributions.ingresos / totalContribution) * 100 : 16.67,
-    eficiencia: totalContribution > 0 ? (contributions.eficiencia / totalContribution) * 100 : 16.67,
-    mortalidad: totalContribution > 0 ? (contributions.mortalidad / totalContribution) * 100 : 16.67,
-    enfermedades: totalContribution > 0 ? (contributions.enfermedades / totalContribution) * 100 : 16.67,
+    rentabilidad: totalContribution > 0 ? (contributions.rentabilidad / totalContribution) * 100 : 20,
+    eficiencia: totalContribution > 0 ? (contributions.eficiencia / totalContribution) * 100 : 20,
+    balance: totalContribution > 0 ? (contributions.balance / totalContribution) * 100 : 20,
+    ingresos: totalContribution > 0 ? (contributions.ingresos / totalContribution) * 100 : 20,
+    ventas: totalContribution > 0 ? (contributions.ventas / totalContribution) * 100 : 20,
   };
 
   // Verificar y ajustar suma = 100%
-  const sumCheck = percentages.produccion + percentages.salud + percentages.ingresos +
-                   percentages.eficiencia + percentages.mortalidad + percentages.enfermedades;
+  const sumCheck = percentages.rentabilidad + percentages.eficiencia + percentages.balance +
+                   percentages.ingresos + percentages.ventas;
 
   if (Math.abs(sumCheck - 100) > 0.001) {
     const factor = 100 / sumCheck;
-    percentages.produccion *= factor;
-    percentages.salud *= factor;
-    percentages.ingresos *= factor;
+    percentages.rentabilidad *= factor;
     percentages.eficiencia *= factor;
-    percentages.mortalidad *= factor;
-    percentages.enfermedades *= factor;
+    percentages.balance *= factor;
+    percentages.ingresos *= factor;
+    percentages.ventas *= factor;
   }
 
-  // --- Score global (promedio ponderado) ---
+  // --- Score global financiero (promedio ponderado) ---
   const scoreGlobal = totalContribution;
   const scoreFinal = Math.round(clamp(scoreGlobal, 0, 100));
 
@@ -215,7 +213,7 @@ function calculateMetricsFromData(totals: DashboardData['totals']) {
 // COMPONENTE PRINCIPAL
 // ============================================================================
 
-export default function GaugeIndicators({ dashboardData, darkMode }: GaugeIndicatorsProps) {
+export default function FinanceGaugeIndicators({ dashboardData, darkMode }: FinanceGaugeIndicatorsProps) {
   const [tooltip, setTooltip] = useState<{
     x: number;
     y: number;
@@ -225,7 +223,7 @@ export default function GaugeIndicators({ dashboardData, darkMode }: GaugeIndica
   // Calcular métricas desde datos reales de Supabase
   const metrics = useMemo(() => {
     if (!dashboardData?.totals) return null;
-    return calculateMetricsFromData(dashboardData.totals);
+    return calculateFinanceMetricsFromData(dashboardData.totals);
   }, [dashboardData?.totals]);
 
   // Generar segmentos con agrupación inteligente (filtrando 0%)
@@ -233,17 +231,16 @@ export default function GaugeIndicators({ dashboardData, darkMode }: GaugeIndica
     if (!metrics) return [];
 
     const metricLabels: Record<string, string> = {
-      produccion: 'Producción',
-      salud: 'Salud',
-      ingresos: 'Ingresos',
+      rentabilidad: 'Rentabilidad',
       eficiencia: 'Eficiencia',
-      mortalidad: 'Mortalidad',
-      enfermedades: 'Enfermedades',
+      balance: 'Balance',
+      ingresos: 'Ingresos',
+      ventas: 'Ventas',
     };
 
     // Crear array de métricas (SOLO las que tienen porcentaje > 0)
     const allMetrics: MetricData[] = Object.entries(metrics.percentages)
-      .filter(([_, porcentaje]) => porcentaje > 0) // FILTRAR 0%
+      .filter(([_, porcentaje]) => porcentaje > 0)
       .map(([key, porcentaje]) => ({
         key,
         label: metricLabels[key] || key,
@@ -262,14 +259,12 @@ export default function GaugeIndicators({ dashboardData, darkMode }: GaugeIndica
 
     // Crear segmentos: si hay múltiples métricas con mismo %, agrupar como "Otros"
     const displaySegments: MetricSegment[] = [];
-    const processedPercentages = new Set<number>();
 
     // Ordenar porcentajes únicos de menor a mayor
     const uniquePercentages = Array.from(groupedByPercentage.keys()).sort((a, b) => a - b);
 
     uniquePercentages.forEach((porcentaje) => {
       const metricsInGroup = groupedByPercentage.get(porcentaje) || [];
-      processedPercentages.add(porcentaje);
 
       if (metricsInGroup.length === 1) {
         // Solo una métrica en este porcentaje → mostrar individual
@@ -288,9 +283,7 @@ export default function GaugeIndicators({ dashboardData, darkMode }: GaugeIndica
         });
       } else {
         // Múltiples métricas con mismo porcentaje → agrupar como "Otros"
-        // El segmento principal será la primera métrica (por orden alfabético)
         const sortedMetrics = [...metricsInGroup].sort((a, b) => a.label.localeCompare(b.label));
-        const primaryMetric = sortedMetrics[0];
 
         displaySegments.push({
           key: `group_${porcentaje}`,
@@ -370,12 +363,12 @@ export default function GaugeIndicators({ dashboardData, darkMode }: GaugeIndica
     <div
       className={`rounded-2xl border p-4 transition-all duration-300 hover:-translate-y-1 hover:scale-[1.006] ${
         darkMode
-          ? 'bg-gradient-to-br from-slate-900/78 via-slate-950/70 to-cyan-950/18 border-cyan-300/18 shadow-2xl shadow-cyan-950/30 backdrop-blur-2xl hover:border-cyan-300/45 hover:shadow-cyan-500/20'
+          ? 'bg-gradient-to-br from-slate-900/78 via-slate-950/70 to-amber-950/18 border-amber-300/18 shadow-2xl shadow-amber-950/30 backdrop-blur-2xl hover:border-amber-300/45 hover:shadow-amber-500/20'
           : 'bg-white border-slate-200 shadow-sm'
       }`}
     >
       <h3 className={`text-base font-light mb-2 ${titleColor}`}>
-        Semáforo General de Rendimiento
+        Semáforo Financiero
       </h3>
 
       <div className="flex h-[260px] justify-center">
@@ -384,11 +377,11 @@ export default function GaugeIndicators({ dashboardData, darkMode }: GaugeIndica
             viewBox="0 0 360 280"
             className="h-full w-full overflow-visible"
             role="img"
-            aria-label="Semáforo general de rendimiento"
+            aria-label="Semáforo financiero"
           >
             <defs>
               {/* Gradiente del arco: rojo → amarillo → verde */}
-              <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <linearGradient id="financeGaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0%" stopColor="#ef1d1d" />
                 <stop offset="30%" stopColor="#ff8a00" />
                 <stop offset="50%" stopColor="#ffd21f" />
@@ -397,7 +390,7 @@ export default function GaugeIndicators({ dashboardData, darkMode }: GaugeIndica
               </linearGradient>
 
               {/* Glow effect */}
-              <filter id="gaugeGlow" x="-20%" y="-20%" width="140%" height="140%">
+              <filter id="financeGaugeGlow" x="-20%" y="-20%" width="140%" height="140%">
                 <feGaussianBlur stdDeviation="3" result="blur" />
                 <feMerge>
                   <feMergeNode in="blur" />
@@ -406,12 +399,12 @@ export default function GaugeIndicators({ dashboardData, darkMode }: GaugeIndica
               </filter>
 
               {/* Sombra para la aguja */}
-              <filter id="needleShadow" x="-50%" y="-50%" width="200%" height="200%">
+              <filter id="financeNeedleShadow" x="-50%" y="-50%" width="200%" height="200%">
                 <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="rgba(0,0,0,0.3)" />
               </filter>
 
               {/* Glow para textos */}
-              <filter id="textGlow" x="-50%" y="-50%" width="200%" height="200%">
+              <filter id="financeTextGlow" x="-50%" y="-50%" width="200%" height="200%">
                 <feGaussianBlur stdDeviation="1" result="blur" />
                 <feMerge>
                   <feMergeNode in="blur" />
@@ -428,11 +421,11 @@ export default function GaugeIndicators({ dashboardData, darkMode }: GaugeIndica
                 GAUGE_CONFIG.center,
                 GAUGE_CONFIG.arcRadius
               )}
-              stroke="url(#gaugeGradient)"
+              stroke="url(#financeGaugeGradient)"
               strokeWidth={GAUGE_CONFIG.arcWidth}
               strokeLinecap="round"
               fill="none"
-              filter="url(#gaugeGlow)"
+              filter="url(#financeGaugeGlow)"
             />
 
             {/* Segmentos individuales con colores dinámicos */}
@@ -482,7 +475,7 @@ export default function GaugeIndicators({ dashboardData, darkMode }: GaugeIndica
                     fill={darkMode ? '#cbd5e1' : '#475569'}
                     fontSize="11"
                     fontWeight="600"
-                    filter={darkMode ? 'url(#textGlow)' : undefined}
+                    filter={darkMode ? 'url(#financeTextGlow)' : undefined}
                   >
                     {segment.label}
                   </text>
@@ -497,7 +490,7 @@ export default function GaugeIndicators({ dashboardData, darkMode }: GaugeIndica
                     fill={segment.colorDinamico}
                     fontSize="16"
                     fontWeight="800"
-                    filter="url(#textGlow)"
+                    filter="url(#financeTextGlow)"
                     style={{
                       textShadow: darkMode ? `0 0 10px ${segment.colorDinamico}60` : 'none',
                     }}
@@ -517,7 +510,7 @@ export default function GaugeIndicators({ dashboardData, darkMode }: GaugeIndica
               stroke="#050505"
               strokeWidth="4"
               strokeLinecap="round"
-              filter="url(#needleShadow)"
+              filter="url(#financeNeedleShadow)"
               className="transition-all duration-700 ease-out"
             />
 
@@ -554,7 +547,6 @@ export default function GaugeIndicators({ dashboardData, darkMode }: GaugeIndica
               }}
             >
               {tooltip.segment.isGroup && tooltip.segment.groupedMetrics ? (
-                // Tooltip para grupo "Otros"
                 <div>
                   <div className="font-medium mb-2" style={{ color: tooltip.segment.colorDinamico }}>
                     {tooltip.segment.label} ({tooltip.segment.groupedMetrics.length} indicadores)
@@ -571,7 +563,6 @@ export default function GaugeIndicators({ dashboardData, darkMode }: GaugeIndica
                   </div>
                 </div>
               ) : (
-                // Tooltip para indicador individual
                 <div>
                   <div className="font-medium" style={{ color: tooltip.segment.colorDinamico }}>
                     {tooltip.segment.label}

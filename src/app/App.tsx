@@ -247,7 +247,7 @@ export default function App() {
 
   return (
     <div
-      className={`min-h-screen ${darkMode ? 'bg-[#061326]' : 'bg-slate-100'}`}
+      className={`min-h-screen ${darkMode ? 'bg-[#061326]' : 'bg-gradient-to-br from-slate-100 via-slate-50 to-blue-50/30'}`}
       style={
         darkMode
           ? {
@@ -341,6 +341,7 @@ export default function App() {
                       selectedLivestock={selectedAnimal === 'ambos' ? 'both' : selectedAnimal}
                       darkMode={darkMode}
                       dashboardData={dashboardData}
+                      selectedArea="produccion"
                     />
                   </div>
                 )}
