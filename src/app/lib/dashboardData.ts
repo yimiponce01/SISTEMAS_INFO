@@ -250,7 +250,7 @@ const emptyAnimalFilter = [-1];
         .select('*')
         .eq('id_tipo_movimiento', 2)
         .in('id_animal', animalIds.length ? animalIds : emptyAnimalFilter)
-        .lte('fecha', dateRange.to)
+        
     ),
     safeSelect(
       'nacimientos',
@@ -263,7 +263,7 @@ const emptyAnimalFilter = [-1];
             : 'id_madre.eq.-1'
         )
         .gte('fecha_nacimiento', dateRange.from)
-        .lte('fecha_nacimiento', dateRange.to)
+        
     ),
     safeSelect(
       'muertes',
@@ -271,7 +271,7 @@ const emptyAnimalFilter = [-1];
         .from('muertes')
         .select('*')
         .in('id_animal', animalIds.length ? animalIds : emptyAnimalFilter)
-        .lte('fecha_muerte', dateRange.to)
+        
     ),
     safeSelect(
       'enfermedades',
@@ -311,6 +311,23 @@ movimientos
 
   const monthlyMap = emptyMonthly();
 
+  // Procesamiento corregido de muertes (sin filtros restrictivos previos)
+  muertes.forEach((item: any) => {
+    // Verificamos que la fecha exista para evitar errores
+    const mKey = monthKey(item.fecha_muerte);
+    if (mKey && monthlyMap[mKey]) {
+      const prefix = animalPrefix(Number(item.id_animal), bovinoIds);
+      const month = monthlyMap[mKey];
+
+      (month as any)[`${prefix}Muertes`] =
+        Number((month as any)[`${prefix}Muertes`] || 0) + 1;
+      
+      // Aseguramos que el total general del mes también sume la muerte
+      (month as any).muertes = 
+        Number((month as any).muertes || 0) + 1;
+    }
+  });
+  
   produccion.forEach((item: any) => {
     const prefix = animalPrefix(Number(item.id_animal), bovinoIds);
     const month = monthlyMap[monthKey(item.fecha)];
@@ -372,13 +389,6 @@ movimientos
     isWithinDateRange(item, dateRange)
   );
 
-  muertesEnRango.forEach((item: any) => {
-    const prefix = animalPrefix(Number(item.id_animal), bovinoIds);
-    const month = monthlyMap[monthKey(item.fecha_muerte)];
-
-    (month as any)[`${prefix}Muertes`] =
-      Number((month as any)[`${prefix}Muertes`] || 0) + 1;
-  });
 
   const monthly = Object.values(monthlyMap).map((item) => ({
     ...item,

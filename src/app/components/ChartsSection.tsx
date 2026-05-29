@@ -212,42 +212,58 @@ export default function ChartsSection({ selectedLivestock, darkMode, dashboardDa
       </div>
 
       <div className={chartCardClass}>
-        <h3 className={titleClass}>Distribución de Producción</h3>
-        <ResponsiveContainer width="100%" height={240}>
-          <PieChart>
-            <Pie
-              data={distributionData}
-              cx="50%"
-              cy="50%"
-              innerRadius={52}
-              outerRadius={82}
-              dataKey="value"
-              label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-            >
-              {distributionData.map((entry, index) => (
-                <Cell key={`cell-${entry.name}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip contentStyle={tooltipStyle} formatter={formatTooltip} />
-          </PieChart>
-        </ResponsiveContainer>
-      </div>
+  <h3 className={titleClass}>Distribución de Producción</h3>
+  <ResponsiveContainer width="100%" height={240}>
+    <PieChart>
+      <Pie
+        data={distributionData}
+        cx="50%"
+        cy="50%"
+        innerRadius={52}
+        outerRadius={82}
+        dataKey="value"
+        // Mostramos el nombre afuera con una línea guía
+        labelLine={true}
+        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+      >
+        {distributionData.map((entry, index) => (
+          <Cell key={`cell-${entry.name}`} fill={COLORS[index % COLORS.length]} />
+        ))}
+      </Pie>
+      
+      {/* Tooltip: Aquí mostramos el valor real y el porcentaje al pasar el mouse */}
+      <Tooltip 
+        contentStyle={tooltipStyle} 
+        formatter={(value: number, name: string) => {
+          const total = distributionData.reduce((acc, curr) => acc + curr.value, 0);
+          const percent = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+          return [`${percent}%`, name];
+        }}
+      />
+    </PieChart>
+  </ResponsiveContainer>
+</div>
 
-      <div className={chartCardClass}>
-        <h3 className={titleClass}>Mortalidad Comparativa</h3>
-        <ResponsiveContainer width="100%" height={240}>
-          <AreaChart data={comparisonData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-            <XAxis dataKey="month" stroke="#94a3b8" style={{ fontSize: '12px' }} />
-            <YAxis stroke="#94a3b8" style={{ fontSize: '12px' }} />
-            <Tooltip contentStyle={tooltipStyle} formatter={formatTooltip} />
-            <Legend wrapperStyle={{ fontSize: '12px' }} />
-            <Area type="monotone" dataKey="bovinosMuertes" stroke="#38BDF8" fill="#38BDF8" fillOpacity={0.35} />
-            <Area type="monotone" dataKey="gallinasMuertes" stroke="#F97316" fill="#F97316" fillOpacity={0.35} />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
+      {/* Busca este bloque en tu archivo y cámbialo por esto: */}
 
+{selectedLivestock === 'ambos' && (
+  <div className={chartCardClass}>
+    <h3 className={titleClass}>Mortalidad Comparativa</h3>
+    <ResponsiveContainer width="100%" height={240}>
+      <AreaChart data={comparisonData}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
+        <XAxis dataKey="month" stroke="#94a3b8" style={{ fontSize: '12px' }} />
+        <YAxis stroke="#94a3b8" style={{ fontSize: '12px' }} />
+        <Tooltip contentStyle={tooltipStyle} formatter={formatTooltip} />
+        <Legend wrapperStyle={{ fontSize: '12px' }} />
+        <Area type="monotone" dataKey="bovinosMuertes" stroke="#38BDF8" fill="#38BDF8" fillOpacity={0.35} />
+        <Area type="monotone" dataKey="gallinasMuertes" stroke="#F97316" fill="#F97316" fillOpacity={0.35} />
+      </AreaChart>
+    </ResponsiveContainer>
+  </div>
+)}
+
+    {selectedLivestock === 'ambos' && (
       <div className={chartCardClass}>
         <h3 className={titleClass}>Comparación de Producción Mensual</h3>
         <ResponsiveContainer width="100%" height={240}>
@@ -263,6 +279,7 @@ export default function ChartsSection({ selectedLivestock, darkMode, dashboardDa
           </ComposedChart>
         </ResponsiveContainer>
       </div>
+    )}
 
       {/* Top Meses Productivos - Componente mejorado */}
       <TopProductiveMonths

@@ -210,63 +210,84 @@ export default function App() {
   }, []);
 
   const handleDownloadDashboardPDF = async (mode: 'all' | 'charts-only') => {
-    setIsGeneratingPDF(true);
-    if (mode === 'charts-only') {
-      setHideAlertsForExport(true);
+  setIsGeneratingPDF(true);
+  if (mode === 'charts-only') {
+    setHideAlertsForExport(true);
+  }
+
+  // Le damos 600ms para asegurar que el DOM invisible se inyecte y estructure correctamente
+  setTimeout(async () => {
+    const element = dashboardRef.current;
+    if (!element) {
+      setIsGeneratingPDF(false);
+      setHideAlertsForExport(false);
+      pushToast('Error: No se encontró el elemento de captura', 'error');
+      return;
     }
 
-    // Le damos 600ms para asegurar que el DOM invisible se inyecte y estructure correctamente
-    setTimeout(async () => {
-      const element = dashboardRef.current;
-      if (!element) {
-        setIsGeneratingPDF(false);
-        setHideAlertsForExport(false);
-        pushToast('Error: No se encontró el elemento de captura', 'error');
-        return;
-      }
+    try {
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        width: 1400,
+        windowWidth: 1400,
+      });
 
-      try {
-        const canvas = await html2canvas(element, {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          width: 1400, // Forzamos ancho de lectura en pixeles estables
-          windowWidth: 1400,
-        });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      
+      const imgWidth = 210;
+      const pageHeight = 297;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      let heightLeft = imgHeight;
+      let position = 0;
 
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        
-        const imgWidth = 210;
-        const pageHeight = 297;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        
-        let heightLeft = imgHeight;
-        let position = 0;
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
 
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
         pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
         heightLeft -= pageHeight;
-
-        while (heightLeft > 0) {
-          position = heightLeft - imgHeight;
-          pdf.addPage();
-          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-          heightLeft -= pageHeight;
-        }
-
-        const title = mode === 'all' ? 'Dashboard_Completo' : 'Filtros_y_Graficos';
-        pdf.save(`${title}_${new Date().toISOString().slice(0, 10)}.pdf`);
-        pushToast('Reporte PDF descargado con éxito', 'success');
-
-      } catch (error) {
-        console.error("Error capturando Dashboard:", error);
-        pushToast('Error al generar el PDF de la pantalla', 'error');
-      } finally {
-        setIsGeneratingPDF(false);
-        setHideAlertsForExport(false);
       }
-    }, 600);
-  };
+
+      const fileName = `${mode === 'all' ? 'Dashboard_Completo' : 'Filtros_y_Graficos'}_${new Date().toISOString().slice(0, 10)}.pdf`;
+      
+      // 1. Ejecutar descarga inmediatamente
+      pdf.save(fileName);
+
+      // 2. Intentar registrar en Supabase (Bloque blindado para no romper la descarga)
+      try {
+        const { error } = await supabase.from('reportes_exportados').insert([{
+          tipo_reporte: mode === 'all' ? 'pdf-complete' : 'charts-only',
+          nombre_archivo: fileName,
+          formato: 'pdf',
+          tamano: '2.0 MB', // Estimado
+          estado: 'generado',
+          registros: 1, // Obligatorio según tu tabla
+          id_usuario: null // Opcional
+        }]);
+
+        if (error) throw error;
+        
+      } catch (dbError) {
+        console.warn("El PDF se descargó, pero hubo un problema al guardar el historial en la BD:", dbError);
+      }
+
+      pushToast('Reporte PDF descargado con éxito', 'success');
+
+    } catch (error) {
+      console.error("Error capturando Dashboard:", error);
+      pushToast('Error al generar el PDF de la pantalla', 'error');
+    } finally {
+      setIsGeneratingPDF(false);
+      setHideAlertsForExport(false);
+    }
+  }, 600);
+};
   useEffect(() => {
     if (!isAuthenticated) return;
 
