@@ -12,9 +12,11 @@ import LoginScreen from './components/LoginScreen';
 import RegisterScreen from './components/RegisterScreen';
 import ForgotPasswordScreen from './components/ForgotPasswordScreen';
 import Toast, { type ToastType } from './components/Toast';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from './lib/supabase';
 import { fetchDashboardData, type DashboardData } from './lib/dashboardData';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 type AuthScreen = 'login' | 'register' | 'forgot';
 type DashboardView = 'dashboard' | 'upload' | 'tracking' | 'settings' | 'alerts' | 'export';
@@ -36,6 +38,10 @@ export default function App() {
   const [selectedAnimal, setSelectedAnimal] = useState<AnimalFilter>('bovinos');
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [dashboardLoading, setDashboardLoading] = useState(false);
+
+  const dashboardRef = useRef<HTMLDivElement>(null);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [hideAlertsForExport, setHideAlertsForExport] = useState(false);
 
   const today = new Date();
   const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -203,6 +209,64 @@ export default function App() {
     getSession();
   }, []);
 
+  const handleDownloadDashboardPDF = async (mode: 'all' | 'charts-only') => {
+    setIsGeneratingPDF(true);
+    if (mode === 'charts-only') {
+      setHideAlertsForExport(true);
+    }
+
+    // Le damos 600ms para asegurar que el DOM invisible se inyecte y estructure correctamente
+    setTimeout(async () => {
+      const element = dashboardRef.current;
+      if (!element) {
+        setIsGeneratingPDF(false);
+        setHideAlertsForExport(false);
+        pushToast('Error: No se encontró el elemento de captura', 'error');
+        return;
+      }
+
+      try {
+        const canvas = await html2canvas(element, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          width: 1400, // Forzamos ancho de lectura en pixeles estables
+          windowWidth: 1400,
+        });
+
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        
+        const imgWidth = 210;
+        const pageHeight = 297;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        
+        let heightLeft = imgHeight;
+        let position = 0;
+
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+
+        while (heightLeft > 0) {
+          position = heightLeft - imgHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+          heightLeft -= pageHeight;
+        }
+
+        const title = mode === 'all' ? 'Dashboard_Completo' : 'Filtros_y_Graficos';
+        pdf.save(`${title}_${new Date().toISOString().slice(0, 10)}.pdf`);
+        pushToast('Reporte PDF descargado con éxito', 'success');
+
+      } catch (error) {
+        console.error("Error capturando Dashboard:", error);
+        pushToast('Error al generar el PDF de la pantalla', 'error');
+      } finally {
+        setIsGeneratingPDF(false);
+        setHideAlertsForExport(false);
+      }
+    }, 600);
+  };
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -364,8 +428,13 @@ export default function App() {
             <ActivityTracking darkMode={darkMode} />
           )}
 
+         
           {currentView === 'export' && (
-            <ExportReports darkMode={darkMode} />
+            <ExportReports 
+              darkMode={darkMode} 
+              onCustomDownload={handleDownloadDashboardPDF} 
+              isGenerating={isGeneratingPDF} 
+            />
           )}
 
           {currentView === 'alerts' && (
@@ -472,6 +541,62 @@ export default function App() {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+         {/* BLOQUE ESPEJO REESTRUCTURADO PARA EVITAR CAÍDAS DE RECHARTS */}
+          {isGeneratingPDF && (
+            <div 
+              ref={dashboardRef}
+              style={{
+                position: 'fixed',
+                top: '0',
+                left: '-9999px', // Con fixed evitamos que colapsen flexbox y gráficos en pantallas ocultas
+                width: '1400px',
+                backgroundColor: '#061326',
+                color: '#ffffff',
+                padding: '32px',
+                zIndex: -9999,
+              }}
+              className="space-y-6"
+            >
+              <div style={{ borderBottom: '1px solid #1e293b', paddingBottom: '16px' }}>
+                <h1 className="text-2xl font-semibold text-cyan-400">PONCEAGROSISTEM - REPORTE DE PANTALLA</h1>
+                <p className="text-xs text-slate-400">Filtros Activos: {selectedAnimal.toUpperCase()} | Rango: {dateRange.from} al {dateRange.to}</p>
+              </div>
+              
+              <FilterBar 
+                selectedArea={selectedArea} 
+                setSelectedArea={() => {}} 
+                selectedAnimal={selectedAnimal} 
+                setSelectedAnimal={() => {}} 
+                dateRange={dateRange} 
+                setDateRange={() => {}} 
+                darkMode={true} 
+              />              
+              
+              <KPICards 
+                selectedLivestock={selectedAnimal} 
+                selectedArea={selectedArea} 
+                dateRange={dateRange} 
+                darkMode={true} 
+                dashboardData={dashboardData} 
+                loading={false} 
+              />
+              
+              <div style={{ width: '100%', display: 'block' }}>
+                {selectedArea === 'finanzas' ? (
+                  <FinanceCharts selectedLivestock={selectedAnimal} dateRange={dateRange} darkMode={true} dashboardData={dashboardData} />
+                ) : (
+                  <ChartsSection selectedLivestock={selectedAnimal} dateRange={dateRange} darkMode={true} dashboardData={dashboardData} />
+                )}
+              </div>
+
+              {!hideAlertsForExport && selectedArea === 'produccion' && (
+                <div className="mt-4">
+                  <SmartAlertsPanel selectedLivestock={selectedAnimal === 'ambos' ? 'both' : selectedAnimal} darkMode={true} dashboardData={dashboardData} selectedArea="produccion" />
+                </div>
+              )}
             </div>
           )}
         </div>
