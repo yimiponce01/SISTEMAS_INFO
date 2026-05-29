@@ -69,23 +69,30 @@ export default function App() {
   const hydrateUser = async (email?: string | null) => {
     const cleanEmail = (email || '').trim().toLowerCase();
 
-    const { data: usuariosDB, error: usuarioError } = await supabase
+    // Consultar ÚNICAMENTE la tabla real `usuarios`
+    const { data: usuarioDB, error: usuarioError } = await supabase
       .from('usuarios')
-      .select('*');
-
-    const usuarioDB = usuariosDB?.find(
-      (u: any) => u.email.trim().toLowerCase() === cleanEmail
-    );
+      .select('id_usuario, nombre, email, rol')
+      .eq('email', cleanEmail)
+      .single();
 
     if (usuarioError || !usuarioDB) {
-      pushToast('Usuario no encontrado', 'error');
+      pushToast('Usuario no encontrado en el sistema', 'error');
+      return false;
+    }
+
+    // Validar que el rol sea válido
+    const userRole = usuarioDB.rol?.toLowerCase();
+    if (!userRole || (userRole !== 'administrador' && userRole !== 'operador')) {
+      pushToast('Rol de usuario inválido. Contacte al administrador.', 'error');
       return false;
     }
 
     setCurrentUser({
+      id: usuarioDB.id_usuario,
       name: usuarioDB.nombre,
       email: usuarioDB.email,
-      role: usuarioDB.rol.toLowerCase(),
+      role: userRole,
     });
 
     setIsAuthenticated(true);
