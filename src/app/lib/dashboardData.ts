@@ -290,10 +290,26 @@ const emptyAnimalFilter = [-1];
     .in('id_animal', animalIds.length ? animalIds : emptyAnimalFilter)
     .lte('fecha', dateRange.to)
 ),
+// Reemplaza tu bloque de incubacion actual dentro de Promise.all por esto:
+safeSelect('incubacion', 
+  supabase
+    .from('incubacion')
+    .select('*')
+    // Filtra por rango de fechas directamente aquí
+    .gte('fecha', dateRange.from)
+    .lte('fecha', dateRange.to)
+),
+
+
     selectedAnimal === 'gallinas' || selectedAnimal === 'ambos'
       ? safeSelect('incubacion', supabase.from('incubacion').select('*'))
       : Promise.resolve([]),
   ]);
+
+  // Añade esto después de await Promise.all([...])
+console.log('--- LOG DE INCUBACIONES ---');
+console.log('Registros brutos:', incubaciones);
+
 movimientos
   const filteredVentas = ventasMovimientos.filter(
     (item: any) =>

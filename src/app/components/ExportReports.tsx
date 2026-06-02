@@ -27,49 +27,29 @@ export default function ExportReports({ darkMode, onCustomDownload, isGenerating
     setExportHistory(data?.slice(0, 5) || []);
   };
 
-  const handleExport = async (type: string, title: string) => {
-    if (exporting || isGenerating) return;
-    
-    setExporting(type);
-    setExported(null);
+  const handleExport = async (id: string, title: string) => {
+    console.log("-> Botón presionado. ID:", id);
+  if (isGenerating) {
+    console.log("-> Bloqueado por isGenerating"); // <--- AÑADE ESTO
+    return;
+  }
 
-    try {
-      const fileName = `${title.replace(/\s+/g, '_').toLowerCase()}.pdf`;
+  setExporting(id);
+  setExported(null);
 
-      // 1. Lógica de descarga (Prioridad absoluta)
-      if (type === 'pdf-complete' && onCustomDownload) {
-        await onCustomDownload('all');
-      } else if (type === 'charts-images' && onCustomDownload) {
-        await onCustomDownload('charts-only');
-      } else {
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        pdf.text('Reporte generado automáticamente', 15, 20);
-        pdf.save(fileName);
-      }
-
-      // 2. Inserción en Supabase (Bloque blindado para no romper la descarga)
-      try {
-        await supabase.from('reportes_exportados').insert([{
-          tipo_reporte: type,
-          nombre_archivo: fileName,
-          formato: 'pdf',
-          tamano: '2.5 MB',
-          estado: 'generado',
-          registros: 1 // Obligatorio según tu estructura de BD
-        }]);
-        await loadExportHistory();
-      } catch (dbError) {
-        console.warn("PDF descargado, pero fallo al registrar en BD:", dbError);
-      }
-
-      setExported(type);
-    } catch (error) {
-      console.error('Error crítico:', error);
-    } finally {
-      setExporting(null);
-      setTimeout(() => setExported(null), 3000);
+  try {
+    // 1. Ejecutar la función que viene del padre (react-to-print)
+    if (onCustomDownload) {
+      await onCustomDownload(id === 'pdf-complete' ? 'all' : 'charts-only');
+      setExported(id);
     }
-  };
+
+  } catch (error) {
+    console.error("Error en la exportación:", error);
+  } finally {
+    setExporting(null);
+  }
+};
   
   const exportOptions = [
     { id: 'pdf-complete', title: 'Dashboard Completo PDF', description: 'Exporta todos los KPIs y alertas', icon: FileText, color: 'red' },
@@ -93,12 +73,43 @@ export default function ExportReports({ darkMode, onCustomDownload, isGenerating
           const colors = colorClasses[option.color];
           return (
             <div key={option.id} className={`rounded-xl border p-6 ${darkMode ? 'bg-slate-800/50 border-slate-700' : 'bg-white border-slate-200'}`}>
+              
+              {/* Título y subtítulo alineados a la izquierda */}
+              <div className="mb-5">
+                <h4 className={`text-base font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                  {option.title}
+                </h4>
+                <p className={`text-sm mt-1.5 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                  {option.id === 'pdf-complete' 
+                    ? 'Descarga todo el dashboard en PDF' 
+                    : 'Descarga solo los gráficos en formato PDF'}
+                </p>
+              </div>
+              
               <button
-                onClick={() => handleExport(option.id, option.title)}
+                type="button"
+                onClick={() => {
+                  console.log("DEBUG: Clic en botón. Estados:", { exporting, isGenerating });
+                  
+                  if (!!exporting || !!isGenerating) {
+                    console.warn("DEBUG: Botón bloqueado por estado. Ignorando clic.");
+                  } else {
+                    handleExport(option.id, option.title);
+                  }
+                }}
                 disabled={!!exporting || !!isGenerating}
-                className={`w-full py-2.5 rounded-lg text-white ${colors.button} flex items-center justify-center gap-2`}
+                className={`w-full py-2.5 rounded-lg text-white ${colors.button} flex items-center justify-center gap-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed`}
               >
-                {exporting === option.id ? 'Exportando...' : exported === option.id ? <><CheckCircle /> ¡Listo!</> : <><Download /> Descargar</>}
+                {exporting === option.id ? (
+                  'Exportando...'
+                ) : exported === option.id ? (
+                  <span className="flex items-center gap-2"><CheckCircle size={18} /> ¡Listo!</span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <Download size={18} /> 
+                    {option.id === 'pdf-complete' ? 'Dashboard PDF Completo' : 'Descargar Gráficos en PDF'}
+                  </span>
+                )}
               </button>
             </div>
           );

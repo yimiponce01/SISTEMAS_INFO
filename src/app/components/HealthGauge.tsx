@@ -54,48 +54,74 @@ export default function HealthGauge({ data, darkMode }: HealthGaugeProps) {
     };
   }, [data.red, data.yellow, data.green]);
 
-  // Solo incluir segmentos con valor > 0
-  const allSegments = useMemo(
-    () => [
-      {
-        key: 'red',
-        label: 'Crítico',
-        value: normalizedData.red,
-        rawValue: data.red,
-        color: '#ff4d5e',
-        glow: 'rgba(255, 77, 94, 0.58)',
-        start: 180,
-        end: 238,
-      },
-      {
-        key: 'yellow',
-        label: 'Regular',
-        value: normalizedData.yellow,
-        rawValue: data.yellow,
-        color: '#ffd447',
-        glow: 'rgba(255, 212, 71, 0.58)',
-        start: 244,
-        end: 296,
-      },
-      {
-        key: 'green',
-        label: 'Excelente',
-        value: normalizedData.green,
-        rawValue: data.green,
-        color: '#35ff93',
-        glow: 'rgba(53, 255, 147, 0.58)',
-        start: 302,
-        end: 360,
-      },
-    ],
-    [normalizedData.red, normalizedData.yellow, normalizedData.green, data.red, data.yellow, data.green]
-  );
+  const allSegments = useMemo(() => {
 
-  // Filtrar segmentos con valor 0 (no renderizar)
-  const segments = useMemo(
-    () => allSegments.filter(s => s.rawValue > 0),
-    [allSegments]
-  );
+  const baseSegments = [
+    {
+      key: 'red',
+      label: 'Crítico',
+      value: normalizedData.red,
+      rawValue: data.red,
+      color: '#ff4d5e',
+      glow: 'rgba(255,77,94,0.58)',
+    },
+    {
+      key: 'yellow',
+      label: 'Regular',
+      value: normalizedData.yellow,
+      rawValue: data.yellow,
+      color: '#ffd447',
+      glow: 'rgba(255,212,71,0.58)',
+    },
+    {
+      key: 'green',
+      label: 'Excelente',
+      value: normalizedData.green,
+      rawValue: data.green,
+      color: '#35ff93',
+      glow: 'rgba(53,255,147,0.58)',
+    },
+  ].filter(segment => segment.rawValue > 0);
+
+  let currentAngle = 180;
+
+  return baseSegments.map((segment, index) => {
+
+    const angleSize =
+      (segment.value / 100) * 180;
+
+    const start = currentAngle;
+
+    const end =
+      index === baseSegments.length - 1
+        ? 360
+        : currentAngle + angleSize;
+
+    currentAngle = end;
+
+    return {
+      ...segment,
+      start,
+      end,
+    };
+  });
+
+}, [
+  normalizedData.red,
+  normalizedData.yellow,
+  normalizedData.green,
+  data.red,
+  data.yellow,
+  data.green
+]);
+
+  const segments = allSegments;
+
+  console.log('HEALTH DATA', {
+    red: data.red,
+    yellow: data.yellow,
+    green: data.green
+  });
 
   // Encontrar el segmento con mayor valor - con manejo seguro de arrays vacíos
   const highest = useMemo(
@@ -140,7 +166,13 @@ export default function HealthGauge({ data, darkMode }: HealthGaugeProps) {
 
   return (
     <div className="relative overflow-hidden rounded-2xl">
-      <div className="pointer-events-none absolute inset-8 rounded-full bg-emerald-400/10 blur-3xl" />
+      <div
+        className={`pointer-events-none absolute inset-8 rounded-full blur-3xl ${
+          darkMode
+            ? 'bg-emerald-400/10'
+            : 'bg-slate-200/15'
+        }`}
+      />
 
       <div className="relative mx-auto h-[292px] max-w-[420px]">
         <svg viewBox="0 0 360 275" className="h-full w-full overflow-visible">
@@ -154,7 +186,14 @@ export default function HealthGauge({ data, darkMode }: HealthGaugeProps) {
             </filter>
             <radialGradient id="healthGaugeCore" cx="50%" cy="55%" r="55%">
               <stop offset="0%" stopColor="rgba(255,255,255,0.24)" />
-              <stop offset="52%" stopColor="rgba(15,23,42,0.72)" />
+              <stop
+                offset="52%"
+                stopColor={
+                  darkMode
+                    ? 'rgba(15,23,42,0.72)'
+                    : 'rgba(255,255,255,0.95)'
+                }
+              />
               <stop offset="100%" stopColor="rgba(2,6,23,0)" />
             </radialGradient>
           </defs>
@@ -191,7 +230,7 @@ export default function HealthGauge({ data, darkMode }: HealthGaugeProps) {
                   y={labelPosition.y}
                   textAnchor="middle"
                   dominantBaseline="middle"
-                  fill="#f8fafc"
+                  fill={darkMode ? '#f8fafc' : '#0f172a'}
                   fontSize="12"
                   fontWeight="700"
                 >
@@ -204,7 +243,7 @@ export default function HealthGauge({ data, darkMode }: HealthGaugeProps) {
           <circle cx={center.x} cy={center.y} r="74" fill="url(#healthGaugeCore)" opacity="0.85" />
           <path
             d={`M ${needleBaseLeft.x.toFixed(2)} ${needleBaseLeft.y.toFixed(2)} L ${needleEnd.x.toFixed(2)} ${needleEnd.y.toFixed(2)} L ${needleBaseRight.x.toFixed(2)} ${needleBaseRight.y.toFixed(2)} Z`}
-            fill="#050505"
+            fill={darkMode ? '#050505' : '#1e293b'}
             stroke="rgba(255,255,255,0.28)"
             strokeWidth="1"
             style={{ transition: 'all 760ms cubic-bezier(0.22, 1, 0.36, 1)' }}
@@ -213,7 +252,7 @@ export default function HealthGauge({ data, darkMode }: HealthGaugeProps) {
             cx={center.x}
             cy={center.y}
             r="18"
-            fill="#050505"
+            fill={darkMode ? '#050505' : '#1e293b'}
             stroke="#e2e8f0"
             strokeWidth="4"
             style={{
@@ -225,12 +264,22 @@ export default function HealthGauge({ data, darkMode }: HealthGaugeProps) {
 
         <div className="absolute inset-x-0 bottom-2 text-center">
           <div
-            className="text-4xl font-light text-white"
+            className={`text-4xl font-light ${
+              darkMode
+                ? 'text-white'
+                : 'text-slate-900'
+            }`}
             style={{ textShadow: `0 0 18px ${highest.glow}, 0 0 32px ${highest.glow}` }}
           >
             {highest.value.toFixed(0)}%
           </div>
-          <div className="mt-1 text-xs uppercase tracking-[0.28em] text-slate-300">
+          <div
+            className={`mt-1 text-xs uppercase tracking-[0.28em] ${
+              darkMode
+                ? 'text-slate-300'
+                : 'text-slate-700'
+            }`}
+          >
             {displayStatus}
           </div>
         </div>
