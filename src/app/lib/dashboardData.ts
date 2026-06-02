@@ -195,6 +195,8 @@ const bovinoIds = animales
     Number(animal.id_animal)
   );
 
+  console.log('ANIMAL IDS:', animalIds.slice(0, 20));
+
 const gallinaIds = animales
   .filter((animal: any) =>
     [2, 5].includes(Number(animal.id_tipo))
@@ -250,6 +252,8 @@ const emptyAnimalFilter = [-1];
         .select('*')
         .eq('id_tipo_movimiento', 2)
         .in('id_animal', animalIds.length ? animalIds : emptyAnimalFilter)
+        .gte('fecha', dateRange.from)
+        .lte('fecha', dateRange.to)
         
     ),
     safeSelect(
@@ -263,6 +267,7 @@ const emptyAnimalFilter = [-1];
             : 'id_madre.eq.-1'
         )
         .gte('fecha_nacimiento', dateRange.from)
+        .lte('fecha_nacimiento', dateRange.to)
         
     ),
     safeSelect(
@@ -270,45 +275,47 @@ const emptyAnimalFilter = [-1];
       supabase
         .from('muertes')
         .select('*')
-        .in('id_animal', animalIds.length ? animalIds : emptyAnimalFilter)
+        .gte('fecha_muerte', dateRange.from)
+        .lte('fecha_muerte', dateRange.to)
         
     ),
-    safeSelect(
-      'enfermedades',
-      supabase
-        .from('enfermedades')
-        .select('*')
-        .in('id_animal', animalIds.length ? animalIds : emptyAnimalFilter)
-        .gte('fecha', dateRange.from)
-        .lte('fecha', dateRange.to)
+
+      safeSelect(
+    'enfermedades',
+    supabase
+      .from('enfermedades')
+      .select('*')
+      .in('id_animal', animalIds.length ? animalIds : emptyAnimalFilter)
+      .gte('fecha', dateRange.from)
+      .lte('fecha', dateRange.to)
+  ),
+    
+      safeSelect(
+    'movimientos_animales',
+    supabase
+      .from('movimientos_animales')
+      .select('*')
+      .in('id_animal', animalIds.length ? animalIds : emptyAnimalFilter)
+      .lte('fecha', dateRange.to)
     ),
+
     safeSelect(
-  'movimientos_animales',
-  supabase
-    .from('movimientos_animales')
-    .select('*')
-    .in('id_animal', animalIds.length ? animalIds : emptyAnimalFilter)
-    .lte('fecha', dateRange.to)
-),
-// Reemplaza tu bloque de incubacion actual dentro de Promise.all por esto:
-safeSelect('incubacion', 
-  supabase
-    .from('incubacion')
-    .select('*')
-    // Filtra por rango de fechas directamente aquí
-    .gte('fecha', dateRange.from)
-    .lte('fecha', dateRange.to)
-),
+    'incubacion',
+    supabase
+      .from('incubacion')
+      .select('*')
+      .gte('fecha_inicio', dateRange.from)
+      .lte('fecha_inicio', dateRange.to)
+    ),
+    ]);
 
-
-    selectedAnimal === 'gallinas' || selectedAnimal === 'ambos'
-      ? safeSelect('incubacion', supabase.from('incubacion').select('*'))
-      : Promise.resolve([]),
-  ]);
+  console.log('MUERTES RAW:', muertes.length);
+console.log(muertes);
 
   // Añade esto después de await Promise.all([...])
 console.log('--- LOG DE INCUBACIONES ---');
 console.log('Registros brutos:', incubaciones);
+console.log('MUERTES RAW COMPLETO:', muertes);
 
 movimientos
   const filteredVentas = ventasMovimientos.filter(
@@ -425,7 +432,16 @@ movimientos
   const totalNacimientos = nacimientos.filter((item: any) =>
     isWithinDateRange(item, dateRange)
   ).length;
+
+  console.table(
+  muertes.map((m: any) => ({
+    id_animal: m.id_animal,
+    id_tipo_animal: m.id_tipo_animal,
+    fecha: m.fecha_muerte,
+  }))
+);
   const filteredMuertes = muertes.filter((m: any) => {
+
   const fecha = new Date(m.fecha_muerte);
 
   const inRange =
@@ -443,8 +459,13 @@ movimientos
   return inRange;
 });
 
-const totalMuertes = filteredMuertes.length;
+  const totalMuertes = filteredMuertes.length;
   const totalEnfermedades = filteredEnfermedades.length;
+  console.log('MUERTES RAW:', muertes.length);
+  console.log('ENFERMEDADES RAW:', enfermedades.length);
+
+  console.log('TOTAL MUERTES:', totalMuertes);
+  console.log('TOTAL ENFERMEDADES:', totalEnfermedades);
 
 const vendidosIds = ventasMovimientos
   .map((m: any) => Number(m.id_animal));
