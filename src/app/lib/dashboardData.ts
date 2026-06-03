@@ -37,6 +37,10 @@ export interface DashboardData {
   bovinoIds: number[];
   gallinaIds: number[];
   monthly: DashboardMonthlyData[];
+  productionDistributionData: {
+  name: string;
+  value: number;
+}[];
   totals: {
     animales: number;
     produccion: number;
@@ -166,28 +170,34 @@ function animalPrefix(id: number, bovinoIds: number[]) {
   return isBovino(id, bovinoIds) ? 'bovinos' : 'gallinas';
 }
 
+
+
 export async function fetchDashboardData(
+  
   selectedAnimal: AnimalFilter,
   dateRange: DateRange
 ): Promise<DashboardData> {
   const selectedIds = animalTypeIds[selectedAnimal];
 
-  const animales = await safeSelect(
+  const todosAnimales = await safeSelect(
   'animales',
   supabase
     .from('animales')
     .select('*')
-    .in('id_tipo', selectedIds)
-    .lte('fecha_ingreso', dateRange.to)
 );
-console.log('SELECTED IDS:', selectedIds);
-console.log('ANIMALES RAW (hasta fecha final):', animales);
+
+
+const animales = todosAnimales.filter(
+  (animal: any) =>
+    selectedIds.includes(Number(animal.id_tipo))
+);
+
 
 const animalIds = animales.map((animal: any) =>
   Number(animal.id_animal)
 );
 
-const bovinoIds = animales
+const bovinoIds = todosAnimales
   .filter((animal: any) =>
     [1, 3, 4].includes(Number(animal.id_tipo))
   )
@@ -195,9 +205,7 @@ const bovinoIds = animales
     Number(animal.id_animal)
   );
 
-  console.log('ANIMAL IDS:', animalIds.slice(0, 20));
-
-const gallinaIds = animales
+const gallinaIds = todosAnimales
   .filter((animal: any) =>
     [2, 5].includes(Number(animal.id_tipo))
   )
@@ -207,26 +215,60 @@ const gallinaIds = animales
 
 const emptyAnimalFilter = [-1];
 
+const [p1, p2, p3] = await Promise.all([
+  supabase
+    .from('produccion')
+    .select(`
+      *,
+      tipos_produccion(nombre)
+    `)
+    .gte('fecha', dateRange.from)
+    .lte('fecha', dateRange.to)
+    .range(0, 999),
+
+  supabase
+    .from('produccion')
+    .select(`
+      *,
+      tipos_produccion(nombre)
+    `)
+    .gte('fecha', dateRange.from)
+    .lte('fecha', dateRange.to)
+    .range(1000, 1999),
+
+  supabase
+    .from('produccion')
+    .select(`
+      *,
+      tipos_produccion(nombre)
+    `)
+    .gte('fecha', dateRange.from)
+    .lte('fecha', dateRange.to)
+    .range(2000, 2999),
+]);
+
+const produccion = [
+  ...(p1.data || []),
+  ...(p2.data || []),
+  ...(p3.data || []),
+];
+
+
+
   const [
-  produccion,
+
   ingresos,
   gastos,
   ventasMovimientos,
   nacimientos,
   muertes,
   enfermedades,
-  movimientos,
+  movimientos_animales,
   incubaciones,
+  
 ] = await Promise.all([
-    safeSelect(
-      'produccion',
-      supabase
-        .from('produccion')
-        .select('*')
-        .in('id_animal', animalIds.length ? animalIds : emptyAnimalFilter)
-        .gte('fecha', dateRange.from)
-        .lte('fecha', dateRange.to)
-    ),
+
+
     safeSelect(
       'ingresos',
       supabase
@@ -304,25 +346,23 @@ const emptyAnimalFilter = [-1];
     supabase
       .from('incubacion')
       .select('*')
-      .gte('fecha_inicio', dateRange.from)
-      .lte('fecha_inicio', dateRange.to)
+      
     ),
     ]);
 
-  console.log('MUERTES RAW:', muertes.length);
-console.log(muertes);
+    
 
-  // Añade esto después de await Promise.all([...])
-console.log('--- LOG DE INCUBACIONES ---');
-console.log('Registros brutos:', incubaciones);
-console.log('MUERTES RAW COMPLETO:', muertes);
+const { data, count, error } = await supabase
+  .from('produccion')
+  .select('*', { count: 'exact' });
 
-movimientos
+
   const filteredVentas = ventasMovimientos.filter(
     (item: any) =>
       belongsToSelection(item, selectedIds, animalIds) &&
       isWithinDateRange(item, dateRange)
   );
+
   const filteredEnfermedades = enfermedades.filter((item: any) =>
     isWithinDateRange(item, dateRange)
   );
@@ -333,6 +373,7 @@ movimientos
   );
 
   const monthlyMap = emptyMonthly();
+
 
   // Procesamiento corregido de muertes (sin filtros restrictivos previos)
   muertes.forEach((item: any) => {
@@ -350,15 +391,106 @@ movimientos
         Number((month as any).muertes || 0) + 1;
     }
   });
-  
-  produccion.forEach((item: any) => {
-    const prefix = animalPrefix(Number(item.id_animal), bovinoIds);
-    const month = monthlyMap[monthKey(item.fecha)];
 
+const productionDistribution: Record<string, number> = {};
+
+produccion.forEach((item: any) => {
+
+
+  const cantidad =
+  Number(item.cantidad || item.produccion || 1);
+
+  const prefix = animalPrefix(
+    Number(item.id_animal),
+    bovinoIds
+  );
+
+  const month =
+    monthlyMap[monthKey(item.fecha)];
+
+  if (month) {
     (month as any)[`${prefix}Produccion`] =
-      Number((month as any)[`${prefix}Produccion`] || 0) +
-      Number(item.cantidad || item.produccion || 0);
-  });
+      Number(
+        (month as any)[`${prefix}Produccion`] || 0
+      ) + cantidad;
+  }
+
+const animalId = Number(item.id_animal);
+
+const animal = todosAnimales.find(
+  (a: any) => Number(a.id_animal) === animalId
+);
+
+const tipoAnimal = Number(animal?.id_tipo);
+
+
+
+const esBovino = [1,3,4].includes(tipoAnimal);
+
+const esGallina = [2,5].includes(tipoAnimal);
+
+
+if (
+  selectedAnimal === 'bovinos' &&
+  !esBovino
+) return;
+
+
+if (
+  selectedAnimal === 'gallinas' &&
+  !esGallina
+) return;
+
+  let nombreTipo = '';
+
+
+  switch (Number(item.id_tipo_produccion)) {
+
+  case 1:
+    nombreTipo = 'Leche';
+    break;
+
+  case 2:
+  nombreTipo = esBovino
+    ? 'Carne Bovino'
+    : 'Carne Gallina';
+  break;
+
+case 3:
+  nombreTipo = 'Huevos';
+  break;
+
+case 4:
+  nombreTipo = 'Carne Gallina';
+  break;
+
+  case 8:
+    nombreTipo = 'Venta Pollo Bebé';
+    break;
+
+  case 9:
+    nombreTipo = 'Alquiler Toro';
+    break;
+
+
+  default:
+    nombreTipo = `Tipo ${item.id_tipo_produccion}`;
+}
+
+
+
+  productionDistribution[nombreTipo] =
+    (productionDistribution[nombreTipo] || 0) +
+    cantidad;
+});
+
+
+  const productionDistributionData = Object.entries(
+  productionDistribution
+).map(([name, value]) => ({
+  name,
+  value,
+}));
 
   ingresos.forEach((item: any) => {
     const isBov = [1, 3, 4].includes(Number(item.id_tipo_animal));
@@ -407,11 +539,6 @@ movimientos
       Number((month as any)[`${prefix}Nacimientos`] || 0) + 1;
   });
 
-  // Mostrar solo muertes DENTRO del rango en los gráficos
-  const muertesEnRango = muertes.filter((item: any) =>
-    isWithinDateRange(item, dateRange)
-  );
-
 
   const monthly = Object.values(monthlyMap).map((item) => ({
     ...item,
@@ -433,13 +560,7 @@ movimientos
     isWithinDateRange(item, dateRange)
   ).length;
 
-  console.table(
-  muertes.map((m: any) => ({
-    id_animal: m.id_animal,
-    id_tipo_animal: m.id_tipo_animal,
-    fecha: m.fecha_muerte,
-  }))
-);
+  
   const filteredMuertes = muertes.filter((m: any) => {
 
   const fecha = new Date(m.fecha_muerte);
@@ -461,11 +582,6 @@ movimientos
 
   const totalMuertes = filteredMuertes.length;
   const totalEnfermedades = filteredEnfermedades.length;
-  console.log('MUERTES RAW:', muertes.length);
-  console.log('ENFERMEDADES RAW:', enfermedades.length);
-
-  console.log('TOTAL MUERTES:', totalMuertes);
-  console.log('TOTAL ENFERMEDADES:', totalEnfermedades);
 
 const vendidosIds = ventasMovimientos
   .map((m: any) => Number(m.id_animal));
@@ -479,16 +595,6 @@ const animalesActivosHistoricos = animales.filter(
     !vendidosIds.includes(Number(animal.id_animal)) &&
     !muertosIds.includes(Number(animal.id_animal))
 );
-
-console.log('ANIMALES INGRESADOS (hasta fecha final):', animales.length);
-console.log('VACAS:', animales.filter((a: any) => Number(a.id_tipo) === 1).length);
-console.log('TOROS:', animales.filter((a: any) => Number(a.id_tipo) === 3).length);
-console.log('CRIAS BOVINAS:', animales.filter((a: any) => Number(a.id_tipo) === 4).length);
-console.log('GALLINAS:', animales.filter((a: any) => Number(a.id_tipo) === 2).length);
-console.log('POLLITOS:', animales.filter((a: any) => Number(a.id_tipo) === 5).length);
-console.log('VENDIDOS (hasta fecha final):', vendidosIds.length);
-console.log('MUERTOS (hasta fecha final):', muertosIds.length);
-console.log('ACTIVOS AL FINAL DEL PERIODO:', animalesActivosHistoricos.length);
 
 const totalAnimales = animalesActivosHistoricos.length;
 const totalIncubaciones = filteredIncubaciones.length;
@@ -511,6 +617,7 @@ const healthGauge = {
     bovinoIds,
     gallinaIds,
     monthly,
+    productionDistributionData,
     totals: {
       animales: totalAnimales,
       produccion: totalProduccion,
@@ -540,10 +647,5 @@ const healthGauge = {
       },
     },
   };
-
-  console.log('[dashboardData] totals', dashboardData.totals);
-  console.log('[dashboardData] query counts', dashboardData.debug.queryCounts);
-  console.log('[dashboardData] monthly totals', monthly);
-
   return dashboardData;
 }

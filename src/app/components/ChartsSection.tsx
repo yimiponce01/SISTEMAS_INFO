@@ -77,11 +77,8 @@ export default function ChartsSection({ selectedLivestock, darkMode, dashboardDa
     };
   });
 
-  const distributionData = [
-    { name: 'Producción', value: totals.produccion },
-    { name: 'Ventas', value: totals.ventas },
-    { name: 'Ganancias', value: totals.ganancias },
-  ];
+  const distributionData =
+  dashboardData?.productionDistributionData || [];
 
   const performanceData = [
     { metric: 'Productividad', value: totals.produccion },
@@ -108,13 +105,7 @@ export default function ChartsSection({ selectedLivestock, darkMode, dashboardDa
     bovinosMuertes: item.bovinosMuertes,
     gallinasMuertes: item.gallinasMuertes,
   }));
-
-  console.log('[ChartsSection] values', {
-    selectedLivestock,
-    totals,
-    monthlyData,
-  });
-
+  
   const primaryColor = selectedLivestock === 'gallinas' ? '#F97316' : '#38BDF8';
   const chartCardClass = `rounded-2xl border p-5 transition-all duration-300 hover:-translate-y-1 hover:scale-[1.006] ${
     darkMode
@@ -128,6 +119,7 @@ export default function ChartsSection({ selectedLivestock, darkMode, dashboardDa
     borderRadius: '12px',
     color: '#ffffff',
   };
+
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
