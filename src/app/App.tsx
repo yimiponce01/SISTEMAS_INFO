@@ -5,6 +5,7 @@ import KPICards from './components/KPICards';
 import ChartsSection from './components/ChartsSection';
 import FinanceCharts from './components/FinanceCharts';
 import SmartAlertsPanel from './components/SmartAlertsPanel';
+import FinancialAlertsPanel from './components/FinancialAlertsPanel';
 import UploadModule from './components/UploadModule';
 import ActivityTracking from './components/ActivityTracking';
 import ExportReports from './components/ExportReports';
@@ -462,8 +463,8 @@ const handleDownloadDashboardPDF = async () => {
               />
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className={selectedArea === 'finanzas' ? 'lg:col-span-3' : 'lg:col-span-2'}>
-                  {selectedArea === 'finanzas' ? (
+                  <div className="lg:col-span-2">                  
+                    {selectedArea === 'finanzas' ? (
                     <FinanceCharts
                       selectedLivestock={selectedAnimal}
                       dateRange={dateRange}
@@ -480,16 +481,21 @@ const handleDownloadDashboardPDF = async () => {
                   )}
                 </div>
 
-                {selectedArea === 'produccion' && (
-                  <div className="lg:col-span-1">
-                    <SmartAlertsPanel
-                        selectedLivestock={selectedAnimal === 'ambos' ? 'both' : selectedAnimal}
-                        darkMode={darkMode}
-                        dashboardData={dashboardData}
-                        selectedArea="produccion"
-                      />
-                  </div>
+                <div className="lg:col-span-1">
+                {selectedArea === 'produccion' ? (
+                  <SmartAlertsPanel
+                    selectedLivestock={selectedAnimal === 'ambos' ? 'both' : selectedAnimal}
+                    darkMode={darkMode}
+                    dashboardData={dashboardData}
+                    selectedArea="produccion"
+                  />
+                ) : (
+                  <FinancialAlertsPanel
+                    darkMode={darkMode}
+                    dashboardData={dashboardData}
+                  />
                 )}
+              </div>
               </div>
             </>
             </div>
