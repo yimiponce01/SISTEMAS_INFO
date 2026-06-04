@@ -274,27 +274,24 @@ ${
     ))}
   </select>
 
-  <select
-    value={toDate.getFullYear()}
-    className={inputClass}
-    style={inputStyle}
-    onChange={(e) =>
-      setDateRange({
-        ...dateRange,
-        to: buildDate(
-          toDate.getDate(),
-          toDate.getMonth(),
-          Number(e.target.value)
-        )
-      })
-    }
-  >
-    {years.map(year => (
-      <option key={year} value={year}>
-        {year}
-      </option>
-    ))}
-  </select>
+  <input
+  type="number"
+  min={2020}
+  max={2050}
+  value={toDate.getFullYear()}
+  className={inputClass}
+  style={inputStyle}
+  onChange={(e) =>
+    setDateRange({
+      ...dateRange,
+      to: buildDate(
+        toDate.getDate(),
+        toDate.getMonth(),
+        Number(e.target.value || 2020)
+      )
+    })
+  }
+/>
 
 </div>
     </div>
