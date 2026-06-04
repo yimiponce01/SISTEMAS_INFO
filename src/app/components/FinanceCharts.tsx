@@ -66,6 +66,15 @@ export default function FinanceCharts({ selectedLivestock, darkMode, dashboardDa
     color: '#ffffff',
   };
 
+  const topMesRentable = [...monthlyData]
+  .map(item => ({
+    ...item,
+    rentabilidadMes:
+      Number(item.ingresos || 0) -
+      Number(item.gastos || 0)
+  }))
+  .sort((a, b) => b.rentabilidadMes - a.rentabilidadMes)[0];
+
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       {/* Semáforo Financiero - PRIMER ELEMENTO */}
@@ -78,7 +87,61 @@ export default function FinanceCharts({ selectedLivestock, darkMode, dashboardDa
             <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
             <XAxis dataKey="month" stroke="#94a3b8" style={{ fontSize: '12px' }} />
             <YAxis stroke="#94a3b8" style={{ fontSize: '12px' }} />
-            <Tooltip contentStyle={tooltipStyle} formatter={formatTooltip} />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: darkMode
+                  ? 'rgba(15,23,42,0.95)'
+                  : 'rgba(255,255,255,0.95)',
+                border: darkMode
+                  ? '1px solid #334155'
+                  : '1px solid #cbd5e1',
+                borderRadius: '12px',
+                color: darkMode ? '#fff' : '#000',
+              }}
+              formatter={(value: any, name: string) => {
+                const labels: Record<string, string> = {
+                  ingresos: 'Ingresos',
+                  gastos: 'Gastos',
+                  ganancias: 'Ganancias',
+                };
+
+                return [
+                  `S/ ${Number(value).toLocaleString()}`,
+                  labels[name] || name,
+                ];
+              }}
+            />
+
+            <Legend
+              wrapperStyle={{
+                fontSize: '12px',
+                color: darkMode ? '#ffffff' : '#000000',
+              }}
+              formatter={(value) => {
+                const colors: Record<string, string> = {
+                  ingresos: '#22c55e',
+                  gastos: '#ef4444',
+                  ganancias: '#facc15',
+                };
+
+                const labels: Record<string, string> = {
+                  ingresos: 'Ingresos',
+                  gastos: 'Gastos',
+                  ganancias: 'Ganancias',
+                };
+
+                return (
+                  <span
+                    style={{
+                      color: colors[value] || (darkMode ? '#fff' : '#000'),
+                      fontWeight: 500,
+                    }}
+                  >
+                    {labels[value] || value}
+                  </span>
+                );
+              }}
+            />
             <Legend wrapperStyle={{ fontSize: '12px' }} />
             <Line type="monotone" dataKey="ingresos" stroke="#22c55e" strokeWidth={3} dot={{ fill: '#22c55e', r: 3 }} />
             <Line type="monotone" dataKey="gastos" stroke="#ef4444" strokeWidth={3} dot={{ fill: '#ef4444', r: 3 }} />
@@ -88,17 +151,62 @@ export default function FinanceCharts({ selectedLivestock, darkMode, dashboardDa
       </div>
 
       <div className={chartCardClass}>
-        <h3 className={titleClass}>Rentabilidad y Balance</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className={titleClass}>Top Meses Más Rentables</h3>
+
+          {topMesRentable && (
+            <div
+              className={`px-3 py-1 rounded-full text-xs font-medium ${
+                darkMode
+                  ? 'bg-gradient-to-r from-emerald-500/20 to-green-500/20 text-emerald-400 border border-emerald-500/30'
+                  : 'bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700 border border-emerald-200'
+              }`}
+            >
+              🏆 {topMesRentable.month}: S/ {topMesRentable.rentabilidadMes.toLocaleString()}
+            </div>
+          )}
+        </div>
+
         <ResponsiveContainer width="100%" height={260}>
-          <AreaChart data={monthlyData}>
+          <BarChart
+            data={[...monthlyData]
+              .map(item => ({
+                ...item,
+                rentabilidadMes:
+                  Number(item.ingresos || 0) -
+                  Number(item.gastos || 0)
+              }))
+              .sort((a, b) => b.rentabilidadMes - a.rentabilidadMes)
+              .slice(0, 6)}
+            layout="vertical"
+          >
             <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-            <XAxis dataKey="month" stroke="#94a3b8" style={{ fontSize: '12px' }} />
-            <YAxis stroke="#94a3b8" style={{ fontSize: '12px' }} />
-            <Tooltip contentStyle={tooltipStyle} formatter={formatTooltip} />
-            <Legend wrapperStyle={{ fontSize: '12px' }} />
-            <Area type="monotone" dataKey="balance" stroke="#38bdf8" fill="#38bdf8" fillOpacity={0.28} />
-            <Area type="monotone" dataKey="rentabilidad" stroke="#a855f7" fill="#a855f7" fillOpacity={0.28} />
-          </AreaChart>
+
+            <XAxis
+              type="number"
+              stroke="#94a3b8"
+            />
+
+            <YAxis
+              dataKey="month"
+              type="category"
+              stroke="#94a3b8"
+            />
+
+            <Tooltip
+              contentStyle={tooltipStyle}
+              formatter={(value: any) => [
+                `S/ ${Number(value).toLocaleString()}`,
+                'Ganancia'
+              ]}
+            />
+
+            <Bar
+              dataKey="rentabilidadMes"
+              fill="#22c55e"
+              radius={[0, 6, 6, 0]}
+            />
+          </BarChart>
         </ResponsiveContainer>
       </div>
 
@@ -128,7 +236,34 @@ export default function FinanceCharts({ selectedLivestock, darkMode, dashboardDa
             <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
             <XAxis dataKey="month" stroke="#94a3b8" style={{ fontSize: '12px' }} />
             <YAxis stroke="#94a3b8" style={{ fontSize: '12px' }} />
-            <Tooltip contentStyle={tooltipStyle} formatter={formatTooltip} />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: darkMode
+                  ? 'rgba(15,23,42,0.95)'
+                  : 'rgba(255,255,255,0.92)',
+                border: darkMode
+                  ? '1px solid rgba(59,130,246,0.3)'
+                  : '1px solid rgba(203,213,225,0.8)',
+                borderRadius: '12px',
+                backdropFilter: 'blur(10px)'
+              }}
+              labelStyle={{
+                color: darkMode ? '#ffffff' : '#000000',
+                fontWeight: 600
+              }}
+              formatter={(value: number, name: string) => {
+                switch (name) {
+                  case 'ingresos':
+                    return [`S/ ${Number(value).toLocaleString()}`, 'Ingresos'];
+
+                  case 'ventas':
+                    return [Number(value).toLocaleString(), 'Ventas'];
+
+                  default:
+                    return [value, name];
+                }
+              }}
+            />
             <Legend wrapperStyle={{ fontSize: '12px' }} />
             <Bar dataKey="ingresos" fill="#22c55e" radius={[6, 6, 0, 0]} />
             <Bar dataKey="ventas" fill="#8b5cf6" radius={[6, 6, 0, 0]} />
