@@ -29,6 +29,15 @@ interface ChartsSectionProps {
   dashboardData: DashboardData | null;
 }
 
+const PIE_COLORS: Record<string, string> = {
+  'Leche': '#38BDF8',
+  'Carne Bovino': '#F97316',
+  'Alquiler Toro': '#22C55E',
+  'Huevos': '#38BDF8',
+  'Carne Gallina': '#F97316',
+  'Venta Pollo Bebé': '#22C55E',
+};
+
 const COLORS = ['#38BDF8', '#F97316', '#22C55E', '#EAB308', '#EF4444'];
 
 const formatTooltip = (value: unknown, name: string): [string, string] => {
@@ -216,22 +225,94 @@ export default function ChartsSection({ selectedLivestock, darkMode, dashboardDa
         dataKey="value"
         // Mostramos el nombre afuera con una línea guía
         labelLine={true}
-        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+label={({ cx, cy, midAngle, outerRadius, percent, name, index }) => {
+  const RADIAN = Math.PI / 180;
+
+  const x =
+    cx + (outerRadius + 22) * Math.cos(-midAngle * RADIAN);
+
+  const y =
+    cy + (outerRadius + 22) * Math.sin(-midAngle * RADIAN);
+
+  const color =
+    COLORS[index % COLORS.length];
+
+  return (
+    <text
+      x={x}
+      y={y}
+      fill={color}
+      textAnchor={x > cx ? 'start' : 'end'}
+      dominantBaseline="central"
+      fontSize={14}
+      fontWeight={500}
+    >
+      {`${name}: ${(percent * 100).toFixed(0)}%`}
+    </text>
+  );
+}}
       >
         {distributionData.map((entry, index) => (
           <Cell key={`cell-${entry.name}`} fill={COLORS[index % COLORS.length]} />
         ))}
       </Pie>
       
-      {/* Tooltip: Aquí mostramos el valor real y el porcentaje al pasar el mouse */}
-      <Tooltip 
-        contentStyle={tooltipStyle} 
-        formatter={(value: number, name: string) => {
-          const total = distributionData.reduce((acc, curr) => acc + curr.value, 0);
-          const percent = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-          return [`${percent}%`, name];
+      <Tooltip
+  contentStyle={tooltipStyle}
+  content={({ active, payload }) => {
+    if (!active || !payload?.length) return null;
+
+    const item = payload[0];
+    const name = item.name as string;
+    const value = Number(item.value);
+
+    const total = distributionData.reduce(
+      (acc, curr) => acc + curr.value,
+      0
+    );
+
+    const percent =
+      total > 0
+        ? ((value / total) * 100).toFixed(1)
+        : '0';
+
+    const color =
+      PIE_COLORS[name] ||
+      (darkMode ? '#ffffff' : '#000000');
+
+    return (
+      <div
+        style={{
+          background: darkMode
+            ? '#0f172a'
+            : '#ffffff',
+          border: '1px solid rgba(103,232,249,.25)',
+          borderRadius: '12px',
+          padding: '10px'
         }}
-      />
+      >
+        <div
+          style={{
+            color,
+            fontWeight: 700,
+            marginBottom: '4px'
+          }}
+        >
+          {name}
+        </div>
+
+        <div
+          style={{
+            color,
+            fontWeight: 600
+          }}
+        >
+          {percent}%
+        </div>
+      </div>
+    );
+  }}
+/>
     </PieChart>
   </ResponsiveContainer>
 </div>

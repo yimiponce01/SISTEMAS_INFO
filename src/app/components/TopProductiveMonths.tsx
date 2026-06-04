@@ -178,11 +178,32 @@ export default function TopProductiveMonths({
     const formatted = typeof value === 'number' ? value.toLocaleString() : String(value);
     
     // Formato especial para soles
-    if (unit === 'S/') {
-      return [`S/ ${formatted}`, label];
-    }
-    
-    return [`${formatted} ${unit}`, label];
+    const colors: Record<string, string> = {
+  'Leche': '#60a5fa',
+  'Carne de vaca': '#3b82f6',
+  'Alquiler de toro': '#93c5fd',
+  'Huevos': '#38bdf8',
+  'Carne Gallina': '#0ea5e9',
+  'Venta Pollo Bebé': '#06b6d4',
+};
+
+const color = colors[label] || '#ffffff';
+
+if (unit === 'S/') {
+  return [
+    <span style={{ color }}>
+      S/ {formatted}
+    </span>,
+    label
+  ] as any;
+}
+
+return [
+  <span style={{ color }}>
+    {formatted} {unit}
+  </span>,
+  label
+] as any;
   };
 
   if (chartData.length === 0) {
@@ -224,18 +245,96 @@ export default function TopProductiveMonths({
             style={{ fontSize: '12px' }}
             width={55}
           />
-          <Tooltip contentStyle={tooltipStyle} formatter={formatTooltip} />
-          <Legend
-            formatter={(value, entry) => {
-              const type = productionTypes.find(t => t.key === entry.value);
-              return (
-                <span className={`text-sm ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                  {type?.label}
-                </span>
-              );
-            }}
-            wrapperStyle={{ fontSize: '12px' }}
-          />
+<Tooltip
+  content={({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+
+    return (
+      <div
+        style={{
+          background: darkMode ? '#0f172a' : '#ffffff',
+          border: darkMode
+            ? '1px solid rgba(103,232,249,0.25)'
+            : '1px solid rgba(203,213,225,0.8)',
+          borderRadius: '12px',
+          padding: '10px',
+        }}
+      >
+        <div
+          style={{
+            color: darkMode ? '#ffffff' : '#000000',
+            marginBottom: '8px',
+            fontWeight: 600,
+          }}
+        >
+          {label}
+        </div>
+
+        {payload.map((item: any, index: number) => {
+          const color =
+            colors[item.payload.type as keyof typeof colors] ||
+            '#38BDF8';
+
+          return (
+            <div key={index}>
+              <span
+                style={{
+                  color,
+                  fontWeight: 600,
+                }}
+              >
+                {item.payload.typeLabel}
+              </span>
+
+              <span
+  style={{
+    color,
+    fontWeight: 600,
+  }}
+>
+  {' : '}
+</span>
+
+              <span
+  style={{
+    color,
+    fontWeight: 600,
+  }}
+>
+  {item.payload.typeUnit === 'S/'
+    ? `S/ ${item.value.toLocaleString()}`
+    : `${item.value.toLocaleString()} ${item.payload.typeUnit}`}
+</span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }}
+/>          <Legend
+  formatter={(value, entry) => {
+    const type = productionTypes.find(
+      t => t.key === entry.value
+    );
+
+    const color =
+      colors[entry.value as keyof typeof colors] ||
+      (darkMode ? '#ffffff' : '#000000');
+
+    return (
+      <span
+        style={{
+          color,
+          fontSize: '14px',
+          fontWeight: 500
+        }}
+      >
+        {type?.label}
+      </span>
+    );
+  }}
+  wrapperStyle={{ fontSize: '12px' }}
+/>
           <Bar dataKey="value" radius={[0, 6, 6, 0]}>
             {chartData.map((entry, index) => {
               const color = colors[entry.type as keyof typeof colors] || '#38BDF8';
