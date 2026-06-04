@@ -252,7 +252,9 @@ const produccion = [
   ...(p2.data || []),
   ...(p3.data || []),
 ];
-
+console.log('RANGO RECIBIDO');
+console.log(dateRange.from);
+console.log(dateRange.to);
 
 
   const [

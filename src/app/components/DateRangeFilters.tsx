@@ -1,4 +1,4 @@
-
+import { useState } from 'react';
 interface DateRangeFiltersProps {
   dateRange: { from: string; to: string };
   setDateRange: (range: { from: string; to: string }) => void;
@@ -21,9 +21,24 @@ const months = [
 ];
 
 const years = Array.from(
-  { length: 7 },
+  { length: 31 },
   (_, i) => 2020 + i
 );
+
+const monthToIndex: Record<string, number> = {
+  enero: 0,
+  febrero: 1,
+  marzo: 2,
+  abril: 3,
+  mayo: 4,
+  junio: 5,
+  julio: 6,
+  agosto: 7,
+  septiembre: 8,
+  octubre: 9,
+  noviembre: 10,
+  diciembre: 11,
+};
 
 export default function DateRangeFilters({
   dateRange,
@@ -50,8 +65,31 @@ const buildDate = (
   return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 };
 
-const fromDate = new Date(dateRange.from);
-const toDate = new Date(dateRange.to);
+const [fromYear, fromMonth, fromDayValue] =
+  dateRange.from.split('-').map(Number);
+
+const [toYear, toMonth, toDayValue] =
+  dateRange.to.split('-').map(Number);
+
+const fromDate = new Date(
+  fromYear,
+  fromMonth - 1,
+  fromDayValue
+);
+
+const toDate = new Date(
+  toYear,
+  toMonth - 1,
+  toDayValue
+);
+
+const [fromDay, setFromDay] = useState(
+  String(fromDate.getDate())
+);
+
+const [toDay, setToDay] = useState(
+  String(toDate.getDate())
+);
 
   const inputClass = `
 w-full rounded-2xl border py-3 pl-4 pr-3 text-sm outline-none transition-all duration-300 focus:scale-[1.01]
@@ -73,6 +111,8 @@ ${
         '0 0 0 1px rgba(203,213,225,0.3), 0 6px 20px rgba(15,23,42,0.06)',
     };
 
+
+
   return (
     <div className="space-y-4">
       <p
@@ -86,51 +126,54 @@ ${
 </p>
       <div className="grid grid-cols-3 gap-2">
 
-  <select
-    value={fromDate.getDate()}
-    className={inputClass}
-    style={inputStyle}
-    onChange={(e) =>
-      setDateRange({
-        ...dateRange,
-        from: buildDate(
-          Number(e.target.value),
-          fromDate.getMonth(),
-          fromDate.getFullYear()
-        )
-      })
-    }
-  >
-    {Array.from(
-      {
-        length: getDaysInMonth(
-          fromDate.getMonth(),
-          fromDate.getFullYear()
-        )
-      },
-      (_, i) => i + 1
-    ).map(day => (
-      <option key={day} value={day}>
-        {day}
-      </option>
-    ))}
-  </select>
+<input
+  type="number"
+  min={1}
+  max={getDaysInMonth(
+    fromDate.getMonth(),
+    fromDate.getFullYear()
+  )}
+  value={fromDay}
+  className={inputClass}
+  style={inputStyle}
+  onChange={(e) => {
+    setFromDay(e.target.value);
+  }}
+  onBlur={() => {
+    const day = Math.min(
+      Number(fromDay || 1),
+      getDaysInMonth(
+        fromDate.getMonth(),
+        fromDate.getFullYear()
+      )
+    );
+
+    setDateRange({
+      ...dateRange,
+      from: buildDate(
+        day,
+        fromDate.getMonth(),
+        fromDate.getFullYear()
+      )
+    });
+  }}
+/>
 
   <select
-    value={fromDate.getMonth()}
-    className={inputClass}
-    style={inputStyle}
-    onChange={(e) =>
-      setDateRange({
-        ...dateRange,
-        from: buildDate(
-          fromDate.getDate(),
-          Number(e.target.value),
-          fromDate.getFullYear()
-        )
-      })
-    }
-  >
+  value={fromDate.getMonth()}
+  className={inputClass}
+  style={inputStyle}
+  onChange={(e) =>
+    setDateRange({
+      ...dateRange,
+      from: buildDate(
+        fromDate.getDate(),
+        Number(e.target.value),
+        fromDate.getFullYear()
+      )
+    })
+  }
+>
     {months.map((month, index) => (
       <option key={month} value={index}>
         {month}
@@ -138,27 +181,30 @@ ${
     ))}
   </select>
 
-  <select
-    value={fromDate.getFullYear()}
-    className={inputClass}
-    style={inputStyle}
-    onChange={(e) =>
-      setDateRange({
-        ...dateRange,
-        from: buildDate(
-          fromDate.getDate(),
-          fromDate.getMonth(),
-          Number(e.target.value)
-        )
-      })
-    }
-  >
-    {years.map(year => (
-      <option key={year} value={year}>
-        {year}
-      </option>
-    ))}
-  </select>
+<datalist id="meses">
+  {months.map((month) => (
+    <option key={month} value={month} />
+  ))}
+</datalist>
+
+  <input
+  type="number"
+  min={2020}
+  max={2050}
+  value={fromDate.getFullYear()}
+  className={inputClass}
+  style={inputStyle}
+  onChange={(e) =>
+    setDateRange({
+      ...dateRange,
+      from: buildDate(
+        fromDate.getDate(),
+        fromDate.getMonth(),
+        Number(e.target.value || 2020)
+      )
+    })
+  }
+/>
 
 </div>
 
@@ -173,35 +219,38 @@ ${
 </p>
 <div className="grid grid-cols-3 gap-2">
 
-  <select
-    value={toDate.getDate()}
-    className={inputClass}
-    style={inputStyle}
-    onChange={(e) =>
-      setDateRange({
-        ...dateRange,
-        to: buildDate(
-          Number(e.target.value),
-          toDate.getMonth(),
-          toDate.getFullYear()
-        )
-      })
-    }
-  >
-    {Array.from(
-      {
-        length: getDaysInMonth(
-          toDate.getMonth(),
-          toDate.getFullYear()
-        )
-      },
-      (_, i) => i + 1
-    ).map(day => (
-      <option key={day} value={day}>
-        {day}
-      </option>
-    ))}
-  </select>
+  <input
+  type="number"
+  min={1}
+  max={getDaysInMonth(
+    toDate.getMonth(),
+    toDate.getFullYear()
+  )}
+  value={toDay}
+  className={inputClass}
+  style={inputStyle}
+  onChange={(e) => {
+    setToDay(e.target.value);
+  }}
+  onBlur={() => {
+    const day = Math.min(
+      Number(toDay || 1),
+      getDaysInMonth(
+        toDate.getMonth(),
+        toDate.getFullYear()
+      )
+    );
+
+    setDateRange({
+      ...dateRange,
+      to: buildDate(
+        day,
+        toDate.getMonth(),
+        toDate.getFullYear()
+      )
+    });
+  }}
+/>
 
   <select
     value={toDate.getMonth()}
