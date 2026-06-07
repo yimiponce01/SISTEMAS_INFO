@@ -22,7 +22,9 @@ function figmaAssetResolver() {
 }
 
 export default defineConfig({
-  base: '/SISTEMAS_INFO/',
+  base: process.env.DEPLOY_TARGET === 'dokploy'
+    ? './'
+    : '/SISTEMAS_INFO/',
   plugins: [
     react(),
     tailwindcss(),
