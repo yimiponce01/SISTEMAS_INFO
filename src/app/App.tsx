@@ -133,39 +133,48 @@ export default function App() {
     }
   };
 
-  const handleRegister = async (
-    name: string,
-    email: string,
-    password: string,
-    role: 'administrador' | 'operador'
-  ) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          name,
-          role,
-        },
+const handleRegister = async (
+  name: string,
+  email: string,
+  password: string,
+  role: 'administrador' | 'operador'
+) => {
+  // Crear la cuenta
+  const { error } = await supabase.auth.signUp({
+    email: email.trim().toLowerCase(),
+    password,
+    options: {
+      data: {
+        name,
+        role,
       },
+    },
+  });
+
+  if (error) {
+    pushToast(error.message, 'error');
+    return;
+  }
+
+  // Iniciar sesión automáticamente
+  const { data: loginData, error: loginError } =
+    await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password,
     });
 
-    if (error) {
-      pushToast(error.message, 'error');
-      return;
-    }
+  if (loginError) {
+    pushToast(loginError.message, 'error');
+    return;
+  }
 
-    setCurrentUser({
-      name,
-      email,
-      role,
-    });
+  // Cargar el perfil igual que en el login normal
+  const hydrated = await hydrateUser(loginData.user.email);
 
-    setIsAuthenticated(true);
-    openDashboardDefaults();
-    pushToast('Cuenta creada', 'success');
-  };
-
+  if (hydrated) {
+    pushToast('¡Cuenta creada correctamente!', 'success');
+  }
+};
   const handleForgotPassword = async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email);
 
